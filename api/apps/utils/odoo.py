@@ -13,13 +13,6 @@ class OdooRESTClient:
     def __init__(self, url, db, username, password, use_cache=True):
         """
         Initialize Odoo client with per-user authentication.
-        
-        Args:
-            url: Odoo instance URL
-            db: Database name
-            username: User's login (phone number or email)
-            password: User's password
-            use_cache: Whether to use cached session
         """
         self.url = url.rstrip("/")
         self.db = db
@@ -29,7 +22,6 @@ class OdooRESTClient:
         self.session_id = None
         self.uid = None
         
-        # Create unique cache key per user
         self.cache_key = f"odoo_session_{db}_{username}"
         
         if use_cache:
@@ -39,9 +31,8 @@ class OdooRESTClient:
                 self.uid = cached_session.get('uid')
                 self.session.cookies.set("session_id", self.session_id)
                 logger.info(f"Using cached session for user: {username}")
-                return  # Don't login if we have cached session
+                return
             
-        # Only login if password is provided or no cached session
         if password:
             self._login()
         else:
@@ -72,7 +63,6 @@ class OdooRESTClient:
                 if not self.session_id or not self.uid:
                     raise Exception("Login failed: Invalid session or uid")
                 
-                # Cache session data for this specific user (1 hour)
                 cache.set(self.cache_key, {
                     'session_id': self.session_id,
                     'uid': self.uid
@@ -96,18 +86,25 @@ class OdooRESTClient:
         cache.delete(self.cache_key)
         self._login()
 
-    def call(self, model, method, args=None, kwargs=None):
+    def call(self, model, method, args=None, kwargs=None, limit=None, offset=None):
         """
-        Call Odoo model method with automatic session refresh.
+        Call Odoo model method with automatic session refresh and pagination support.
         
         Args:
             model: Odoo model name (e.g., 'res.users')
             method: Method name (e.g., 'search_read')
             args: Positional arguments
             kwargs: Keyword arguments
+            limit: Number of records to return (pagination)
+            offset: Number of records to skip (pagination)
         
         Returns:
-            Result from Odoo
+            Dict with:
+                - result: The actual data
+                - total_count: Total number of records (if paginated)
+                - limit: Limit used
+                - offset: Offset used
+                - has_more: Boolean indicating if more records exist
         """
         url = f"{self.url}/custom_api/call"
         payload = {
@@ -116,6 +113,12 @@ class OdooRESTClient:
             "args": args or [],
             "kwargs": kwargs or {}
         }
+        
+        # Add pagination parameters
+        if limit is not None:
+            payload["limit"] = limit
+            payload["offset"] = offset or 0
+        
         headers = {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest"
@@ -124,23 +127,21 @@ class OdooRESTClient:
         try:
             response = self.session.post(url, json=payload, headers=headers, timeout=10)
             
-            # Check for session expiration
             if response.status_code == 401 or "invalid session" in response.text.lower():
                 logger.warning(f"Session expired for user: {self.username}, refreshing...")
                 self._refresh_session()
-                # Retry the request
                 response = self.session.post(url, json=payload, headers=headers, timeout=10)
             
             response.raise_for_status()
             data = response.json()
             
-            # Check for errors in response
             if 'error' in data.get('result', {}):
                 error_msg = data['result']['error']
                 logger.error(f"Odoo error for user {self.username}: {error_msg}")
                 raise Exception(f"Odoo error: {error_msg}")
-                
-            return data["result"]["result"]
+            
+            # Return full response with pagination metadata
+            return data["result"]
             
         except requests.RequestException as e:
             logger.error(f"Request failed for user {self.username}: {e}")
@@ -166,15 +167,6 @@ class OdooRESTClient:
 def get_odoo_client(username, password, db="jdb", url="http://localhost:8069"):
     """
     Get Odoo client instance for specific user.
-    
-    Args:
-        username: User's login (phone number or email)
-        password: User's password
-        db: Database name (default: "jdb")
-        url: Odoo instance URL (default: "http://localhost:8069")
-    
-    Returns:
-        OdooRESTClient instance
     """
     try:
         client = OdooRESTClient(
@@ -192,17 +184,8 @@ def get_odoo_client(username, password, db="jdb", url="http://localhost:8069"):
 def get_odoo_client_with_cached_session(username, db="jdb", url="http://localhost:8069"):
     """
     Get Odoo client instance using cached session for specific user.
-    
-    Args:
-        username: User's login (phone number or email)
-        db: Database name (default: "jdb")
-        url: Odoo instance URL (default: "http://localhost:8069")
-    
-    Returns:
-        OdooRESTClient instance
     """
     try:
-        # Check if user has an active Odoo session
         session_cache_key = f"odoo_session_{getattr(settings, 'ODOO_DB', 'jdb')}_{username}"
         cached_session = cache.get(session_cache_key)
         
@@ -213,11 +196,9 @@ def get_odoo_client_with_cached_session(username, db="jdb", url="http://localhos
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
-        # Create client that will use the cached session
-        # No password needed - it uses the cached session_id and uid
         odoo = get_odoo_client(
             username=username,
-            password="",  # Empty password - will use cached session
+            password="",
             db=getattr(settings, 'ODOO_DB', 'jdb'),
             url=getattr(settings, 'ODOO_URL', 'http://localhost:8069')
         )
@@ -231,24 +212,23 @@ def get_odoo_client_with_cached_session(username, db="jdb", url="http://localhos
         )
 
 
-# For testing purposes only
 if __name__ == "__main__":
-    # Example: Get client for specific user
     client = get_odoo_client(
         username="user@example.com",
         password="user_password"
     )
 
-    orders = client.call(
+    # Example with pagination
+    result = client.call(
         model='sale.order',
         method='search_read',
         args=[[('state', '=', 'sale')]],
-        kwargs={'fields': ['name', 'amount_total', 'state'], 'limit': 5}
+        kwargs={'fields': ['name', 'amount_total', 'state']},
+        limit=10,
+        offset=0
     )
     
-    from pprint import pprint
-    print("Orders:", orders)
+    print("Orders:", result.get('result'))
+    print(f"Total: {result.get('total_count')}, Has more: {result.get('has_more')}")
     
-    # Logout when done
     client.logout()
-    

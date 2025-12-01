@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
-from apps.utils.odoo import get_odoo_client
+from apps.utils.odoo import get_odoo_client, get_odoo_client_with_cached_session
 from apps.utils.pagination import StandardResultsSetPagination
 from .serializers import (
     InvoiceSerializer,
@@ -17,200 +17,741 @@ from .serializers import (
 
 
 class PaymentProofAPIView(GenericAPIView):
+    """
+    Create and list payment proofs for orders belonging to the authenticated user.
+    """
     serializer_class = PaymentProofSerializer
 
-    def get_queryset(self):
-        return []
-    
-    def post(self, request, order_id):
-        """Create payment proof in Odoo"""
-        # Validate delivery person access
-        delivery_person_id = request.user.salesperson_id
-        if not delivery_person_id:
-            return Response(
-                {'error': 'Salesperson not assigned'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Check order access
-        odoo = get_odoo_client()
-        order_exists = odoo.call('sale.order', 'search_count', [
-            [('id', '=', order_id), 
-             ('delivery_person_id', '=', delivery_person_id)]
-        ])
-        if not order_exists:
-            return Response(
-                {'error': 'Order not found or access denied'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Validate and prepare data
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        responses={200: PaymentProofSerializer(many=True)},
+        summary="List payment proofs for an order",
+        description="Returns paginated list of payment proofs for a specific order belonging to the authenticated user"
+    )
+    def get(self, request, order_id):
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
         
-        # Create payment proof in Odoo
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+
         try:
-            proof_id = odoo.call('payment.proof', 'create', [{
-                'sale_order_id': order_id,
-                'amount': float(data['amount']),
-                'payment_date': data['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
-                'payment_method_id': data['payment_method_id'],
-                'journal_id': data['journal_id'],
-                'proof_image': data['proof_image'],
-                'state': 'submitted',
-            }])
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # First check if order exists and belongs to user
+            order_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(order_id)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': ['id'],
+                    'limit': 1
+                }
+            )
+            
+            if not order_result.get('result'):
+                return Response(
+                    {"error": "Order not found or you don't have permission to view it"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get payment proofs with pagination
+            result = odoo.call(
+                model='payment.proof',
+                method='search_read',
+                kwargs={
+                    'domain': [('sale_order_id', '=', int(order_id))],
+                    'fields': [
+                        'id', 'name', 'amount', 'payment_date', 
+                        'state', 'payment_method_id', 'journal_id', 'proof_image',
+                        'create_date', 'sale_order_id',
+                    ],
+                },
+                limit=page_size,
+                offset=offset
+            )
+
+            # Extract pagination metadata
+            proofs = result.get('result', [])
+            total_count = result.get('total_count', len(proofs))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
             
             return Response({
-                'id': int(proof_id.split('(')[1].split(',')[0]),
-                'message': 'Payment proof submitted for review'
-            }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                "payment_proofs": proofs,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
 
-    def get(self, request, order_id):
-        """List payment proofs for an order"""
-        delivery_person_id = request.user.salesperson_id
-        if not delivery_person_id:
+        except Exception as e:
             return Response(
-                {'error': 'Salesperson not assigned'}, 
-                status=status.HTTP_403_FORBIDDEN
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # Get proofs from Odoo
-        odoo = get_odoo_client()
-        proofs = odoo.call('payment.proof', 'search_read', [
-            [('sale_order_id', '=', order_id),
-             ('sale_order_id.delivery_person_id', '=', delivery_person_id)]
-        ], {'fields': [
-            'id', 'name', 'amount', 'payment_date', 
-            'state', 'payment_method_id', 'journal_id', 'proof_image'
-        ]})
-        
-        return Response(proofs, status=status.HTTP_200_OK)
+    @extend_schema(
+        request=PaymentProofSerializer,
+        responses={
+            201: OpenApiResponse(description="Payment proof created successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            403: OpenApiResponse(description="Forbidden"),
+            404: OpenApiResponse(description="Order not found"),
+        },
+        summary="Create payment proof",
+        description="Create a new payment proof for an order belonging to the authenticated user"
+    )
+    def post(self, request, order_id):
+        """Create payment proof in Odoo"""
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Check order access using user_id
+            order_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(order_id)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': ['id', 'name', 'state', 'amount_total', 'amount_residual'],
+                    'limit': 1
+                }
+            )
+            
+            if not order_result.get('result'):
+                return Response(
+                    {"error": "Order not found or access denied"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            order = order_result['result'][0]
+            
+            # Validate and prepare data
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+            
+            # Check if amount exceeds order residual
+            if data['amount'] > order.get('amount_residual', 0):
+                return Response(
+                    {'error': 'Payment amount exceeds order residual amount'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create payment proof in Odoo
+            proof_id = odoo.call(
+                model='payment.proof',
+                method='create',
+                args=[{
+                    'sale_order_id': int(order_id),
+                    'amount': float(data['amount']),
+                    'payment_date': data['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                    'payment_method_id': data['payment_method_id'],
+                    'journal_id': data['journal_id'],
+                    'proof_image': data['proof_image'],
+                    'state': 'submitted',
+                    'user_id': request.user.odoo_user_id,
+                }]
+            )
+            
+            return Response({
+                'id': proof_id,
+                'message': 'Payment proof submitted for review',
+                'order_id': int(order_id)
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PaymentProofDetailAPIView(GenericAPIView):
+    """
+    Retrieve, update, or delete a payment proof belonging to the authenticated user.
+    """
     serializer_class = PaymentProofSerializer
     
+    @extend_schema(
+        responses={200: PaymentProofSerializer},
+        summary="Retrieve a payment proof",
+        description="Get details of a specific payment proof if it belongs to an order of the authenticated user"
+    )
     def get(self, request, id):
         try:
-            odoo = get_odoo_client()
-            payment_proof = odoo.call('payment.proof', 'search_read',
-                              args=[[('id', '=', id), ('sale_order_id.delivery_person_id', '=', request.user.salesperson_id)]],
-                              kwargs={'fields': [
-                                'id', 'name', 'amount', 'payment_date', 
-                                'state', 'payment_method_id', 'journal_id', 'proof_image'
-                              ]})
-            if not payment_proof:
-                raise NotFound("Payment proof not found")
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
             
-            return Response(payment_proof[0], status=status.HTTP_200_OK)
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Get payment proof with user validation through sale order
+            proof_result = odoo.call(
+                model='payment.proof',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(id)),
+                        ('sale_order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': [
+                        'id', 'name', 'amount', 'payment_date', 
+                        'state', 'payment_method_id', 'journal_id', 'proof_image',
+                        'sale_order_id', 'create_date', 'write_date',
+                    ],
+                    'limit': 1
+                }
+            )
+            
+            proofs = proof_result.get('result', [])
+            
+            if not proofs:
+                raise NotFound("Payment proof not found or access denied")
+            
+            return Response(proofs[0], status=status.HTTP_200_OK)
 
         except NotFound as e:
-            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    def delete(self, request, id):
-        try:
-            odoo = get_odoo_client()
-            success = odoo.call('payment.proof', 'unlink', args=[[id]])
-            if not success:
-                return Response({'error': 'Failed to delete payment proof'}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({'info': 'Payment proof deleted'}, status=status.HTTP_204_NO_CONTENT)
-
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+    @extend_schema(
+        request=PaymentProofSerializer,
+        responses={
+            200: OpenApiResponse(description="Payment proof updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            404: OpenApiResponse(description="Payment proof not found"),
+        },
+        summary="Update a payment proof",
+        description="Update a payment proof if it belongs to an order of the authenticated user"
+    )
     def put(self, request, id):
         try:
-            odoo = get_odoo_client()
-            values = {}
-            if 'amount' in request.data:
-                values['amount'] = request.data['amount']
-            if 'payment_date' in request.data:
-                values['payment_date'] = request.data['payment_date']
-            if 'payment_method_id' in request.data:
-                values['payment_method_id'] = request.data['payment_method_id']
-            if 'journal_id' in request.data:
-                values['journal_id'] = request.data['journal_id']
-            if 'proof_image' in request.data:
-                values['proof_image'] = request.data['proof_image']
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-            success = odoo.call('payment.proof', 'write', args=[[id], values])
+            # First check if payment proof exists and belongs to user
+            check_result = odoo.call(
+                model='payment.proof',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(id)),
+                        ('sale_order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': ['id', 'state'],
+                    'limit': 1
+                }
+            )
+            
+            if not check_result.get('result'):
+                return Response(
+                    {"error": "Payment proof not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            proof = check_result['result'][0]
+            
+            # Don't allow updating if proof is already approved/rejected
+            if proof.get('state') in ['approved', 'rejected']:
+                return Response(
+                    {"error": f"Cannot update payment proof in {proof['state']} state"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate and prepare update data
+            serializer = self.get_serializer(data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
+            
+            # Prepare update values
+            update_values = {}
+            if 'amount' in data:
+                update_values['amount'] = float(data['amount'])
+            if 'payment_date' in data:
+                update_values['payment_date'] = data['payment_date'].strftime('%Y-%m-%d %H:%M:%S')
+            if 'payment_method_id' in data:
+                update_values['payment_method_id'] = data['payment_method_id']
+            if 'journal_id' in data:
+                update_values['journal_id'] = data['journal_id']
+            if 'proof_image' in data:
+                update_values['proof_image'] = data['proof_image']
+
+            # Update the payment proof
+            success = odoo.call(
+                model='payment.proof',
+                method='write',
+                args=[[int(id)], update_values]
+            )
+            
             if not success:
-                return Response({'error': 'Failed to update payment proof'}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({'info': 'Payment proof updated'}, status=status.HTTP_200_OK)
+                return Response(
+                    {'error': 'Failed to update payment proof'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            return Response(
+                {'message': 'Payment proof updated successfully'},
+                status=status.HTTP_200_OK
+            )
+
+        except ValidationError as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(description="Payment proof deleted successfully"),
+            404: OpenApiResponse(description="Payment proof not found"),
+        },
+        summary="Delete a payment proof",
+        description="Delete a payment proof if it belongs to an order of the authenticated user"
+    )
+    def delete(self, request, id):
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # First check if payment proof exists and belongs to user
+            check_result = odoo.call(
+                model='payment.proof',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(id)),
+                        ('sale_order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': ['id', 'state'],
+                    'limit': 1
+                }
+            )
+            
+            if not check_result.get('result'):
+                return Response(
+                    {"error": "Payment proof not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            proof = check_result['result'][0]
+            
+            # Don't allow deleting if proof is already approved/rejected
+            if proof.get('state') in ['approved', 'rejected']:
+                return Response(
+                    {"error": f"Cannot delete payment proof in {proof['state']} state"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Delete the payment proof
+            success = odoo.call(
+                model='payment.proof',
+                method='unlink',
+                args=[[int(id)]]
+            )
+            
+            if not success:
+                return Response(
+                    {'error': 'Failed to delete payment proof'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            return Response(
+                {'message': 'Payment proof deleted successfully'},
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PaymentJournalListAPIView(GenericAPIView):
-    serializer_class = PaymentJournalSerializer
-
+    """
+    Returns paginated payment journals.
+    """
+    
     @extend_schema(
-        responses=PaymentJournalSerializer(many=True),
-        description="List all payment journals from Odoo"
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='type',
+                description='Filter by journal type (bank, cash, general, etc.)',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        responses={200: PaymentJournalSerializer(many=True)},
+        description="List all payment journals from Odoo with pagination"
     )
     def get(self, request):
-        odoo = get_odoo_client()
-        journals = odoo.call('account.journal', 'search_read', kwargs={'fields': ['id', 'name']})
-        return Response(journals, status=status.HTTP_200_OK)
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Filter parameters
+        journal_type = request.query_params.get('type')
+
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Build domain
+            domain = []
+            if journal_type:
+                domain.append(('type', '=', journal_type))
+            
+            # Add filter for active journals
+            domain.append(('active', '=', True))
+
+            # Call Odoo with pagination
+            result = odoo.call(
+                model='account.journal',
+                method='search_read',
+                kwargs={
+                    'domain': domain,
+                    'fields': ['id', 'name', 'type', 'code', 'currency_id'],
+                },
+                limit=page_size,
+                offset=offset
+            )
+
+            # Extract pagination metadata
+            journals = result.get('result', [])
+            total_count = result.get('total_count', len(journals))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            
+            return Response({
+                "journals": journals,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PaymentMethodListAPIView(GenericAPIView):
-    serializer_class = PaymentMethodSerializer
-
+    """
+    Returns paginated payment methods.
+    """
+    
     @extend_schema(
-        responses=PaymentMethodSerializer(many=True),
-        description="List all payment methods from Odoo"
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='code',
+                description='Filter by payment method code',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        responses={200: PaymentMethodSerializer(many=True)},
+        description="List all payment methods from Odoo with pagination"
     )
     def get(self, request):
-        odoo = get_odoo_client()
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Filter parameters
+        method_code = request.query_params.get('code')
+
         try:
-            payment_methods = odoo.call('account.payment.method', 'search_read', kwargs={'fields': ['id', 'name']})
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Build domain
+            domain = []
+            if method_code:
+                domain.append(('code', '=', method_code))
+
+            # Call Odoo with pagination
+            result = odoo.call(
+                model='account.payment.method',
+                method='search_read',
+                kwargs={
+                    'domain': domain,
+                    'fields': ['id', 'name', 'code', 'payment_type'],
+                },
+                limit=page_size,
+                offset=offset
+            )
+
+            # Extract pagination metadata
+            payment_methods = result.get('result', [])
+            total_count = result.get('total_count', len(payment_methods))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            
+            return Response({
+                "payment_methods": payment_methods,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        return Response(payment_methods, status=status.HTTP_200_OK)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class InvoiceListAPIView(GenericAPIView):
-    serializer_class = InvoiceSerializer
-    pagination_class = StandardResultsSetPagination
-
+    """
+    Get and create invoices for orders belonging to the authenticated user.
+    """
+    
     @extend_schema(
-        # parameters=[
-        #     OpenApiParameter(name='order_id', description='Sale order ID', required=True, type=int)
-        # ],
-        responses=InvoiceSerializer(many=True),
-        description="Get invoices related to a sale order assigned to the delivery person"
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='state',
+                description='Filter by invoice state',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        responses={200: InvoiceSerializer(many=True)},
+        description="Get invoices related to a sale order belonging to the authenticated user"
     )
     def get(self, request, order_id):
-        delivery_person_id = request.user.salesperson_id
-        if not delivery_person_id:
-            raise ValidationError({'error': 'Salesperson not assigned to this user'})
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Filter parameters
+        invoice_state = request.query_params.get('state')
 
-        domain = [('invoice_origin', '!=', False)]
-        odoo = get_odoo_client()
-        sale_order = odoo.call('sale.order', 'search_read',
-                               args=[[('id', '=', int(order_id)), ('delivery_person_id.id', '=', delivery_person_id)]],
-                               kwargs={'fields': ['name']})
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-        if not sale_order:
-            return Response({'error': 'Sale order not found or access denied'}, status=status.HTTP_404_NOT_FOUND)
+            # First check if order exists and belongs to user
+            order_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(order_id)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': ['id', 'name'],
+                    'limit': 1
+                }
+            )
+            
+            if not order_result.get('result'):
+                return Response(
+                    {"error": "Sale order not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            order = order_result['result'][0]
+            order_name = order['name']
+            
+            # Build domain for invoices
+            domain = [('invoice_origin', '=', order_name)]
+            if invoice_state:
+                domain.append(('state', '=', invoice_state))
 
-        sale_order_name = sale_order[0]['name']
-        domain.append(('invoice_origin', '=', sale_order_name))
+            # Get invoices with pagination
+            result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': domain,
+                    'fields': [
+                        'id', 'name', 'amount_total', 'amount_residual', 
+                        'invoice_date', 'state', 'invoice_date_due',
+                        'payment_state', 'invoice_origin',
+                    ],
+                },
+                limit=page_size,
+                offset=offset
+            )
 
-        invoices = odoo.call('account.move', 'search_read',
-                             args=[domain],
-                             kwargs={'fields': ['id', 'name', 'amount_total', 'amount_residual', 'invoice_date']})
+            # Extract pagination metadata
+            invoices = result.get('result', [])
+            total_count = result.get('total_count', len(invoices))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            
+            return Response({
+                "invoices": invoices,
+                "order_info": {
+                    "id": order['id'],
+                    "name": order['name']
+                },
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
 
-        page = self.paginate_queryset(invoices)
-        return self.get_paginated_response(page)
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @extend_schema(
         request=None,
@@ -219,82 +760,284 @@ class InvoiceListAPIView(GenericAPIView):
             200: OpenApiResponse(description='Invoice already exists'),
             404: OpenApiResponse(description='Sale order not found'),
             400: OpenApiResponse(description='Invoice creation failed'),
-            500: OpenApiResponse(description='Internal server error'),
         },
         description="Create an invoice for the specified sale order if it doesn't exist"
     )
     def post(self, request, order_id):
         try:
-            # Read sale order with state field
-            odoo = get_odoo_client()
-            sale_order = odoo.call('sale.order', 'read', args=[[order_id]], kwargs={'fields': ['name', 'state']})
-            if not sale_order:
-                return Response({'error': 'Sale order not found'}, status=status.HTTP_404_NOT_FOUND)
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-            # Confirm order if not already confirmed
-            if sale_order[0]['state'] not in ['sale', 'done']:
-                odoo.call('sale.order', 'action_confirm', args=[[order_id]])
-
-            sale_order_name = sale_order[0]['name']
-            existing_invoices = odoo.call('account.move', 'search_read',
-                                            args=[[('invoice_origin', '=', sale_order_name)]],
-                                            kwargs={'fields': ['id', 'state', 'amount_total']})
-
-            if existing_invoices:
+            # Check if order exists and belongs to user
+            order_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(order_id)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': ['id', 'name', 'state', 'amount_total'],
+                    'limit': 1
+                }
+            )
+            
+            if not order_result.get('result'):
+                return Response(
+                    {"error": "Sale order not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            order = order_result['result'][0]
+            order_name = order['name']
+            
+            # Check if invoice already exists
+            existing_result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': [('invoice_origin', '=', order_name)],
+                    'fields': ['id', 'name', 'state', 'amount_total'],
+                    'limit': 1
+                }
+            )
+            
+            if existing_result.get('result'):
+                existing_invoice = existing_result['result'][0]
                 return Response({
-                    'info': 'Invoice already exists',
-                    'invoice_id': existing_invoices[0]['id']
+                    'message': 'Invoice already exists',
+                    'invoice_id': existing_invoice['id'],
+                    'invoice_name': existing_invoice['name'],
+                    'state': existing_invoice['state']
                 }, status=status.HTTP_200_OK)
 
-            # CORRECTED METHOD NAME: Use action_invoice_create
-            invoice_ids = odoo.call('sale.order', 'action_create_invoice', args=[[order_id]])
+            # Confirm order if not already confirmed
+            if order['state'] not in ['sale', 'done']:
+                odoo.call(
+                    model='sale.order',
+                    method='action_confirm',
+                    args=[[int(order_id)]]
+                )
+
+            # Create invoice
+            invoice_ids = odoo.call(
+                model='sale.order',
+                method='_create_invoices',
+                args=[[int(order_id)], {
+                    'move_type': 'out_invoice',
+                }]
+            )
+            
             if not invoice_ids:
-                return Response({'error': 'Invoice creation failed'}, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response(
+                    {"error": "Invoice creation failed"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             invoice_id = invoice_ids[0]
-            odoo.call('account.move', 'action_post', args=[[invoice_id]])
-
-            return Response({'info': 'Invoice created', 'invoice_id': invoice_id}, status=status.HTTP_201_CREATED)
+            
+            # Post the invoice
+            odoo.call(
+                model='account.move',
+                method='action_post',
+                args=[[invoice_id]]
+            )
+            
+            # Get created invoice details
+            invoice_result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', invoice_id)],
+                    'fields': ['id', 'name', 'amount_total', 'state'],
+                    'limit': 1
+                }
+            )
+            
+            invoice = invoice_result['result'][0] if invoice_result.get('result') else {'id': invoice_id}
+            
+            return Response({
+                'message': 'Invoice created successfully',
+                'invoice_id': invoice['id'],
+                'invoice_name': invoice.get('name', ''),
+                'amount_total': invoice.get('amount_total', order['amount_total']),
+                'state': invoice.get('state', 'draft')
+            }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class InvoiceRetrieveAPIView(GenericAPIView):
-    serializer_class = InvoiceSerializer
-
+    """
+    Retrieve a single invoice if it belongs to an order of the authenticated user.
+    """
+    
     @extend_schema(
-        # parameters=[
-        #     OpenApiParameter(name='id', description='Invoice ID', required=True, type=int)
-        # ],
-        responses=InvoiceSerializer,
+        responses={200: InvoiceSerializer},
         description="Retrieve a single invoice by ID"
     )
     def get(self, request, id):
-        odoo = get_odoo_client()
-        invoice = odoo.call('account.move', 'search_read', args=[[('id', '=', id)]],
-                            kwargs={'fields': ['id', 'name', 'amount_total', 'amount_residual', 'invoice_date']})
-        if not invoice:
-            return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(invoice[0], status=status.HTTP_200_OK)
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-    @extend_schema(
-        # parameters=[
-        #     OpenApiParameter(name='id', description='Invoice ID', required=True, type=int)
-        # ],
-        responses={204: OpenApiResponse(description='Invoice deleted')},
-        description="Delete an invoice by ID"
-    )
-    def delete(self, request, id):
-        odoo = get_odoo_client()
-        success = odoo.call('account.move', 'unlink', args=[[id]])
-        if not success:
-            return Response({'error': 'Failed to delete invoice'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'info': 'Invoice deleted'}, status=status.HTTP_204_NO_CONTENT)
+            # Get invoice with validation that it belongs to user's order
+            result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(id)),
+                        ('invoice_line_ids.sale_line_ids.order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': [
+                        'id', 'name', 'amount_total', 'amount_residual', 
+                        'invoice_date', 'state', 'invoice_date_due',
+                        'payment_state', 'invoice_origin', 'ref',
+                        'amount_untaxed', 'amount_tax',
+                    ],
+                    'limit': 1
+                }
+            )
+            
+            invoices = result.get('result', [])
+            
+            if not invoices:
+                return Response(
+                    {"error": "Invoice not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            return Response(invoices[0], status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PaymentRegisterAPIView(GenericAPIView):
+    """
+    Register and manage payments for invoices belonging to orders of the authenticated user.
+    """
     serializer_class = PaymentRegisterSerializer
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        responses={200: PaymentRegisterSerializer(many=True)},
+        description="List all payments for a given invoice belonging to user's order"
+    )
+    def get(self, request, invoice_id):
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # First validate invoice belongs to user's order
+            invoice_result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(invoice_id)),
+                        ('invoice_line_ids.sale_line_ids.order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': ['id', 'name', 'amount_residual'],
+                    'limit': 1
+                }
+            )
+            
+            if not invoice_result.get('result'):
+                return Response(
+                    {"error": "Invoice not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            invoice = invoice_result['result'][0]
+            
+            # Get payments with pagination
+            result = odoo.call(
+                model='account.payment',
+                method='search_read',
+                kwargs={
+                    'domain': [('invoice_ids', 'in', [int(invoice_id)])],
+                    'fields': [
+                        'id', 'amount', 'payment_date', 'journal_id', 'state',
+                        'payment_method_id', 'ref', 'currency_id',
+                    ],
+                },
+                limit=page_size,
+                offset=offset
+            )
+
+            # Extract pagination metadata
+            payments = result.get('result', [])
+            total_count = result.get('total_count', len(payments))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            
+            return Response({
+                "payments": payments,
+                "invoice_info": {
+                    "id": invoice['id'],
+                    "name": invoice['name'],
+                    "amount_residual": invoice['amount_residual']
+                },
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @extend_schema(
         request=PaymentRegisterSerializer,
@@ -303,86 +1046,102 @@ class PaymentRegisterAPIView(GenericAPIView):
             404: OpenApiResponse(description='Invoice not found'),
             400: OpenApiResponse(description='Invalid amount or request data'),
         },
-        description="Register a payment for a given invoice"
+        description="Register a payment for a given invoice belonging to user's order"
     )
     def post(self, request, invoice_id):
-        serializer = PaymentRegisterSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
         amount = serializer.validated_data.get('amount')
         journal_id = serializer.validated_data.get('journal_id')
         payment_date = serializer.validated_data.get('payment_date')
-        odoo = get_odoo_client()
-        invoice_data = odoo.call('account.move', 'read', args=[[invoice_id]], kwargs={'fields': ['amount_residual']})
-        if not invoice_data:
-            return Response({'error': 'Invoice not found'}, status=status.HTTP_404_NOT_FOUND)
+        payment_method_id = serializer.validated_data.get('payment_method_id', False)
+        communication = serializer.validated_data.get('communication', '')
 
-        amount_due = invoice_data[0]['amount_residual']
-        if amount_due == 0:
-            return Response({'info': 'Invoice already paid'}, status=status.HTTP_200_OK)
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-        if amount > amount_due:
-            return Response({'error': 'Amount exceeds due'}, status=status.HTTP_400_BAD_REQUEST)
+            # Validate invoice belongs to user's order
+            invoice_result = odoo.call(
+                model='account.move',
+                method='search_read',
+                kwargs={
+                    'domain': [
+                        ('id', '=', int(invoice_id)),
+                        ('invoice_line_ids.sale_line_ids.order_id.user_id', '=', request.user.odoo_user_id)
+                    ],
+                    'fields': ['id', 'name', 'amount_residual', 'currency_id', 'partner_id'],
+                    'limit': 1
+                }
+            )
+            
+            if not invoice_result.get('result'):
+                return Response(
+                    {"error": "Invoice not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            invoice = invoice_result['result'][0]
+            amount_due = invoice['amount_residual']
+            
+            # Validate payment amount
+            if amount_due == 0:
+                return Response(
+                    {'message': 'Invoice already paid'}, 
+                    status=status.HTTP_200_OK
+                )
 
-        payment_wizard_id = odoo.call('account.payment.register', 'create', [{
-            'amount': amount,
-            'payment_date': payment_date,
-            'journal_id': journal_id,
-            'payment_type': 'inbound',
-        }])
+            if amount > amount_due:
+                return Response(
+                    {'error': 'Payment amount exceeds due amount'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        odoo.call('account.payment.register', 'action_create_payments', args=[[payment_wizard_id], {
-            'active_model': 'account.move',
-            'active_ids': [invoice_id],
-        }])
+            # Create payment
+            payment_id = odoo.call(
+                model='account.payment',
+                method='create',
+                args=[{
+                    'amount': amount,
+                    'payment_date': payment_date.strftime('%Y-%m-%d'),
+                    'journal_id': journal_id,
+                    'payment_method_id': payment_method_id,
+                    'payment_type': 'inbound',
+                    'partner_type': 'customer',
+                    'partner_id': invoice['partner_id'][0] if invoice.get('partner_id') else False,
+                    'ref': communication,
+                    'currency_id': invoice.get('currency_id', False),
+                    'invoice_ids': [(4, int(invoice_id))],
+                }]
+            )
+            
+            # Post the payment
+            odoo.call(
+                model='account.payment',
+                method='action_post',
+                args=[[payment_id]]
+            )
+            
+            return Response({
+                'message': 'Payment registered successfully',
+                'payment_id': payment_id,
+                'invoice_id': invoice_id,
+                'amount': amount
+            }, status=status.HTTP_200_OK)
 
-        payments = odoo.call('account.payment', 'search_read', args=[[('invoice_ids', 'in', [invoice_id])]],
-                             kwargs={'fields': ['id', 'amount', 'payment_date', 'journal_id']})
-        return Response({'info': 'Payment registered', 'payments': payments}, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        responses=PaymentRegisterSerializer(many=True),
-        description="List all payments for a given invoice"
-    )
-    def get(self, request, invoice_id):
-        odoo = get_odoo_client()
-        payments = odoo.call('account.payment', 'search_read', args=[[('invoice_ids', 'in', [invoice_id])]],
-                             kwargs={'fields': ['id', 'amount', 'payment_date', 'journal_id', 'state']})
-        return Response(payments, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        request=PaymentRegisterSerializer,
-        responses={200: OpenApiResponse(description='Payment updated')},
-        description="Update a payment by ID"
-    )
-    def put(self, request, invoice_id):
-        payment_id = request.data.get('payment_id')
-        if not payment_id:
-            return Response({'error': 'payment_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        values = {}
-        if 'amount' in request.data:
-            values['amount'] = request.data['amount']
-        if 'payment_date' in request.data:
-            values['payment_date'] = request.data['payment_date']
-        if 'journal_id' in request.data:
-            values['journal_id'] = request.data['journal_id']
-        odoo = get_odoo_client()
-        success = odoo.call('account.payment', 'write', args=[[payment_id], values])
-        if not success:
-            return Response({'error': 'Failed to update payment'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'info': 'Payment updated'}, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        request=None,
-        responses={204: OpenApiResponse(description='Payment deleted')},
-        description="Delete a payment by ID"
-    )
-    def delete(self, request, invoice_id):
-        payment_id = request.data.get('payment_id')
-        if not payment_id:
-            return Response({'error': 'payment_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-        odoo = get_odoo_client()
-        success = odoo.call('account.payment', 'unlink', args=[[payment_id]])
-        if not success:
-            return Response({'error': 'Failed to delete payment'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'info': 'Payment deleted'}, status=status.HTTP_204_NO_CONTENT)
+        except ValidationError as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            

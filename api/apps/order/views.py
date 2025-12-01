@@ -15,7 +15,7 @@ from .serializers import SaleOrderSerializer
 @extend_schema_view(
     get=extend_schema(
         summary="List Sale Orders",
-        description="Returns a paginated list of sale orders assigned to the authenticated delivery person.",
+        description="Returns a paginated list of sale orders for the authenticated user.",
         responses={200: SaleOrderSerializer(many=True)},
     ),
     post=extend_schema(
@@ -29,62 +29,139 @@ from .serializers import SaleOrderSerializer
     )
 )
 class OrderListAPIView(GenericAPIView):
-    serializer_class = SaleOrderSerializer
-    pagination_class = StandardResultsSetPagination
-
+    """
+    Returns paginated sale orders with metadata for the authenticated user.
+    """
+    
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='page', type=int, location=OpenApiParameter.QUERY, description="Page number for pagination"),
-            OpenApiParameter(name='start_date', type=str, location=OpenApiParameter.QUERY, description="Filter orders from this date (YYYY-MM-DD)"),
-            OpenApiParameter(name='end_date', type=str, location=OpenApiParameter.QUERY, description="Filter orders until this date (YYYY-MM-DD)"),
-            OpenApiParameter(name='customer', type=str, location=OpenApiParameter.QUERY, description="Filter orders by customer name (partial match)")
+            OpenApiParameter(
+                name='page',
+                description='Page number (default: 1)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='page_size',
+                description='Number of items per page (default: 20, max: 100)',
+                required=False,
+                type=int,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='start_date',
+                description='Filter orders from this date (YYYY-MM-DD)',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='end_date',
+                description='Filter orders until this date (YYYY-MM-DD)',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='customer',
+                description='Filter orders by customer name (partial match)',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+            OpenApiParameter(
+                name='state',
+                description='Filter orders by state',
+                required=False,
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
         ],
         responses={200: SaleOrderSerializer(many=True)},
         summary="List Sale Orders with Filters",
-        description="Returns a paginated list of sale orders with optional filters for date range and customer name."
+        description="Returns a paginated list of sale orders with optional filters for date range, customer name, and state."
     )
     def get(self, request):
+        # Pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Limit max page size to prevent abuse
+        page_size = min(page_size, 100)
+        
+        # Calculate offset
+        offset = (page - 1) * page_size
+        
+        # Get filter parameters
+        start_date = request.query_params.get('start_date')  # format: 'YYYY-MM-DD'
+        end_date = request.query_params.get('end_date')      # format: 'YYYY-MM-DD'
+        customer_name = request.query_params.get('customer')  # partial or full name
+        state = request.query_params.get('state')  # order state
+
+        # Build domain filters - filter by user_id (odoo user id)
+        domain = [('user_id.id', '=', request.user.odoo_user_id)]
+
+        if start_date:
+            domain.append(('date_order', '>=', start_date))
+        if end_date:
+            domain.append(('date_order', '<=', end_date))
+        if customer_name:
+            domain.append(('partner_id.name', 'ilike', customer_name))
+        if state:
+            domain.append(('state', '=', state))
+
         try:
-            limit = self.pagination_class.page_size
-            offset = (int(request.query_params.get('page', 1)) - 1) * limit
-
-            start_date = request.query_params.get('start_date')  # format: 'YYYY-MM-DD'
-            end_date = request.query_params.get('end_date')      # format: 'YYYY-MM-DD'
-            customer_name = request.query_params.get('customer')  # partial or full name
-
-            # Build domain filters
-            domain = [('user_id', '=', request.user.odoo_user_id)]
-
-            if start_date:
-                # convert to full datetime if needed
-                domain.append(('date_order', '>=', start_date))
-            if end_date:
-                domain.append(('date_order', '<=', end_date))
-            if customer_name:
-                domain.append(('partner_id.name', 'ilike', customer_name))
-
             user = request.user
             odoo = get_odoo_client_with_cached_session(username=user.username)
-            all_orders = odoo.call(
-                'sale.order', 'search_read',
-                args=[domain],
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Call Odoo with pagination
+            result = odoo.call(
+                model='sale.order',
+                method='search_read',
                 kwargs={
+                    'domain': domain,
                     'fields': [
-                        'name', 'amount_total', 'state', 'partner_id',
+                        'id', 'name', 'amount_total', 'state', 'partner_id',
                         'order_line', 'note', 'amount_to_invoice',
                         'access_url', 'access_token', 'date_order',
-                        'payment_proof_ids',
+                        'payment_proof_ids', 'user_id', 'create_date',
+                        'amount_untaxed', 'amount_tax',
                     ],
-                    # 'offset': offset,
-                    # 'limit': limit,
-                }
+                },
+                limit=page_size,
+                offset=offset
             )
 
-            page = self.paginate_queryset(all_orders)
-            return self.get_paginated_response(page)
+            # Extract pagination metadata
+            orders = result.get('result', [])
+            total_count = result.get('total_count', len(orders))
+            has_more = result.get('has_more', False)
+            
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            
+            return Response({
+                "orders": orders,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": has_more,
+                    "has_previous": page > 1,
+                }
+            })
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -93,51 +170,100 @@ class OrderListAPIView(GenericAPIView):
         partner_id = serializer.validated_data['partner_id']
         order_lines_data = serializer.validated_data['order_lines']
 
-        order_lines = []
-        total_amount = 0.0
-        
-        odoo = get_odoo_client()
-        for line in order_lines_data:
-            product = odoo.call('product.product', 'search_read',
-                                args=[[('id', '=', line['product_id'])]],
-                                kwargs={'fields': ['id', 'list_price']})
-            if not product:
-                return Response({'error': f'Product not found with ID {line["product_id"]}!'},
-                                status=status.HTTP_404_NOT_FOUND)
-            total_amount += product[0]['list_price'] * line['quantity']
-            order_lines.append((0, 0, {
-                'product_id': line['product_id'],
-                'product_uom_qty': line['quantity'],
-                'height': line.get('height', 0.0),
-                'width': line.get('width', 0.0),
-                'count': line.get('count', 1),
-                'take_remains': line.get('take_remains', False),
-            }))
-
         try:
-            delivery_person = odoo.call('hr.employee', 'search_read',
-                args=[[('id', '=', request.user.salesperson_id)]],
-                kwargs={'fields': ['id', 'delivery_person_sale_debt', 'delivery_person_sale_debt_limit']}
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Validate products and calculate total amount
+            order_lines = []
+            total_amount = 0.0
+            
+            for line in order_lines_data:
+                # Get product details
+                product_result = odoo.call(
+                    model='product.product',
+                    method='search_read',
+                    kwargs={
+                        'domain': [('id', '=', line['product_id'])],
+                        'fields': ['id', 'list_price'],
+                        'limit': 1
+                    }
+                )
+                
+                products = product_result.get('result', [])
+                
+                if not products:
+                    return Response(
+                        {'error': f'Product not found with ID {line["product_id"]}!'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                product = products[0]
+                line_total = product['list_price'] * line['quantity']
+                total_amount += line_total
+                
+                order_lines.append((0, 0, {
+                    'product_id': line['product_id'],
+                    'product_uom_qty': line['quantity'],
+                    'height': line.get('height', 0.0),
+                    'width': line.get('width', 0.0),
+                    'count': line.get('count', 1),
+                    'take_remains': line.get('take_remains', False),
+                }))
+
+            # Check user's debt limit (using user_id instead of salesperson_id)
+            # This assumes you have a way to get the user's debt limit
+            # You might need to adjust this based on your Odoo model structure
+            user_info_result = odoo.call(
+                model='res.users',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', request.user.odoo_user_id)],
+                    'fields': ['id', 'sale_debt', 'sale_debt_limit'],
+                    'limit': 1
+                }
             )
             
-            if delivery_person:
-                delivery_person = delivery_person[0]
-                if delivery_person['delivery_person_sale_debt'] + total_amount > delivery_person['delivery_person_sale_debt_limit']:
+            if user_info_result.get('result'):
+                user_info = user_info_result['result'][0]
+                current_debt = user_info.get('sale_debt', 0)
+                debt_limit = user_info.get('sale_debt_limit', 0)
+                
+                if current_debt + total_amount > debt_limit:
                     return Response(
-                        {'error': 'Total order amount exceeds the allowed debt limit for this delivery person.'},
+                        {'error': 'Total order amount exceeds the allowed debt limit for this user.'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
             
-            sale_order_id = odoo.call('sale.order', 'create', [{
-                'partner_id': partner_id,
-                'order_line': order_lines,
-                'delivery_person_id': request.user.salesperson_id,
-                'note': serializer.validated_data.get('note', ''),
-            }])
-            return Response({'sale_order_id': int(sale_order_id.split('(')[1].split(',')[0])}, status=status.HTTP_201_CREATED)
+            # Create the sale order
+            sale_order_id = odoo.call(
+                model='sale.order',
+                method='create',
+                args=[{
+                    'partner_id': partner_id,
+                    'order_line': order_lines,
+                    'user_id': request.user.odoo_user_id,  # Use user_id instead of delivery_person_id
+                    'note': serializer.validated_data.get('note', ''),
+                }]
+            )
+            
+            return Response(
+                {
+                    'sale_order_id': sale_order_id,
+                    'message': 'Sale order created successfully'
+                }, 
+                status=status.HTTP_201_CREATED
+            )
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 @extend_schema_view(
@@ -145,57 +271,114 @@ class OrderListAPIView(GenericAPIView):
         summary="Retrieve a Sale Order",
         description="Fetch details of a sale order for the given ID.",
         responses={200: SaleOrderSerializer},
-        # parameters=[OpenApiParameter(name="pk", description="Sale Order ID", required=True, type=int)],
     ),
     put=extend_schema(
         summary="Update a Sale Order",
         description="Update order lines for an existing sale order.",
         request=SaleOrderSerializer,
         responses={200: OpenApiResponse(description="Sale order updated")},
+    ),
+    delete=extend_schema(
+        summary="Delete a Sale Order",
+        description="Delete a sale order by its ID if it belongs to the authenticated user.",
+        responses={
+            204: OpenApiResponse(description="Sale order deleted successfully"),
+            404: OpenApiResponse(description="Sale order not found or permission denied"),
+        },
     )
 )
 class OrderDetailAPIView(GenericAPIView):
-    serializer_class = SaleOrderSerializer
-
+    """
+    Retrieve, update, or delete a sale order for the authenticated user.
+    """
+    
     def get(self, request, pk):
         try:
-            odoo = get_odoo_client()
-            order = odoo.call('sale.order', 'search_read',
-                              args=[[('id', '=', pk), ('delivery_person_id', '=', request.user.salesperson_id)]],
-                              kwargs={'fields': [
-                                  'name', 'amount_total', 'state', 'partner_id',
-                                  'order_line', 'note', 'amount_to_invoice', 'access_url', 'access_token'
-                              ]})
-            if not order:
-                raise NotFound("Order not found")
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-            # First, fetch the order lines with product_id (which returns [ID, Name])
-            order_lines = odoo.call('sale.order.line', 'search_read',
-                                    args=[[('order_id', '=', order[0]['id'])]],
-                                    kwargs={'fields': ['product_id', 'product_uom_qty', 'height', 'width', 'count']})
+            # Get order with user_id filter
+            result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(pk)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': [
+                        'id', 'name', 'amount_total', 'state', 'partner_id',
+                        'order_line', 'note', 'amount_to_invoice', 
+                        'access_url', 'access_token', 'date_order',
+                        'create_date', 'amount_untaxed', 'amount_tax',
+                        'payment_proof_ids',
+                    ],
+                    'limit': 1
+                }
+            )
+            
+            orders = result.get('result', [])
+            
+            if not orders:
+                raise NotFound("Order not found or you don't have permission to view it")
 
+            order = orders[0]
+            
+            # Get order lines with product images
+            order_lines_result = odoo.call(
+                model='sale.order.line',
+                method='search_read',
+                kwargs={
+                    'domain': [('order_id', '=', order['id'])],
+                    'fields': [
+                        'id', 'product_id', 'product_uom_qty', 
+                        'height', 'width', 'count', 'price_unit',
+                        'price_subtotal', 'name',
+                    ]
+                }
+            )
+            
+            order_lines = order_lines_result.get('result', [])
+            
+            # Enhance order lines with product images
             for line in order_lines:
-                if line.get('product_id'): # Ensure product_id exists
-                    product_id = line['product_id'][0] # Get the ID from the [ID, Name] tuple
+                if line.get('product_id'):
+                    product_id = line['product_id'][0]  # Get ID from [ID, Name] tuple
                     
-                    # Fetch the image directly from the product.product model
-                    product_data = odoo.call('product.product', 'search_read',
-                                            args=[[('id', '=', product_id)]],
-                                            kwargs={'fields': ['image_1920']}) # Request the image directly
-
-                    if product_data:
-                        line['product_image'] = product_data[0].get('image_1920')
+                    # Get product image
+                    product_result = odoo.call(
+                        model='product.product',
+                        method='search_read',
+                        kwargs={
+                            'domain': [('id', '=', product_id)],
+                            'fields': ['image_1920', 'default_code'],
+                            'limit': 1
+                        }
+                    )
+                    
+                    if product_result.get('result'):
+                        product_data = product_result['result'][0]
+                        line['product_image'] = product_data.get('image_1920')
+                        line['product_code'] = product_data.get('default_code')
                     else:
-                        line['product_image'] = False 
+                        line['product_image'] = False
+                        line['product_code'] = ''
 
-            order[0]['order_line'] = order_lines
+            order['order_lines'] = order_lines
 
-            return Response(order[0], status=status.HTTP_200_OK)
+            return Response(order, status=status.HTTP_200_OK)
 
         except NotFound as e:
-            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     def put(self, request, pk):
         serializer = self.get_serializer(data=request.data)
@@ -203,56 +386,130 @@ class OrderDetailAPIView(GenericAPIView):
 
         order_lines_data = serializer.validated_data['order_lines']
 
-        odoo = get_odoo_client()
-        
-        order_lines = []
-        for line in order_lines_data:
-            product = odoo.call('product.product', 'search_read',
-                                args=[[('id', '=', line['product_id'])]],
-                                kwargs={'fields': ['id']})
-            if not product:
-                return Response({'error': f'Product not found with ID {line["product_id"]}!'},
-                                status=status.HTTP_404_NOT_FOUND)
-
-            order_lines.append((0, 0, {
-                'product_id': line['product_id'],
-                'product_uom_qty': line['quantity'],
-                'height': line.get('height', 0.0),
-                'width': line.get('width', 0.0),
-                'count': line.get('count', 0),
-            }))
-
         try:
-            sale_order_id = odoo.call('sale.order', 'write', [pk], {
-                'order_line': order_lines,
-            })
-            return Response({'sale_order_id': sale_order_id}, status=status.HTTP_200_OK)
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # First check if order exists and belongs to user
+            check_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(pk)), ('user_id.id', '=', request.user.odoo_user_id)],
+                    'fields': ['id'],
+                    'limit': 1
+                }
+            )
+            
+            if not check_result.get('result'):
+                return Response(
+                    {"error": "Order not found or you don't have permission to update it"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Validate products
+            order_lines = []
+            for line in order_lines_data:
+                product_result = odoo.call(
+                    model='product.product',
+                    method='search_read',
+                    kwargs={
+                        'domain': [('id', '=', line['product_id'])],
+                        'fields': ['id'],
+                        'limit': 1
+                    }
+                )
+                
+                if not product_result.get('result'):
+                    return Response(
+                        {'error': f'Product not found with ID {line["product_id"]}!'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                order_lines.append((0, 0, {
+                    'product_id': line['product_id'],
+                    'product_uom_qty': line['quantity'],
+                    'height': line.get('height', 0.0),
+                    'width': line.get('width', 0.0),
+                    'count': line.get('count', 0),
+                }))
+
+            # Update the sale order
+            sale_order_id = odoo.call(
+                model='sale.order',
+                method='write',
+                args=[[int(pk)], {
+                    'order_line': order_lines,
+                }]
+            )
+            
+            return Response(
+                {
+                    'sale_order_id': sale_order_id,
+                    'message': 'Sale order updated successfully'
+                }, 
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
-    @extend_schema(
-        summary="Delete a Sale Order",
-        description="Delete a sale order by its ID if it belongs to the authenticated delivery person.",
-        responses={204: OpenApiResponse(description="Sale order deleted successfully"),
-                   404: OpenApiResponse(description="Sale order not found or permission denied"),
-                   500: OpenApiResponse(description="Internal server error")},
-    )
     def delete(self, request, pk):
         try:
-            odoo = get_odoo_client()
-            order = odoo.call('sale.order', 'search_read',
-                              args=[[('id', '=', pk), ('delivery_person_id', '=', request.user.salesperson_id)]],
-                              kwargs={'fields': ['id']})
-            if not order:
-                raise Response({'error': 'Order not found or you do not have permission to delete it.'},
-                               status=status.HTTP_404_NOT_FOUND)
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
 
-            odoo.call('sale.order', 'unlink', [pk])
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            # Check if order exists and belongs to user
+            check_result = odoo.call(
+                model='sale.order',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(pk)), ('user_id', '=', request.user.odoo_user_id)],
+                    'fields': ['id', 'state'],
+                    'limit': 1
+                }
+            )
+            
+            if not check_result.get('result'):
+                return Response(
+                    {"error": "Order not found or you don't have permission to delete it"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            order = check_result['result'][0]
+            
+            # Optional: Check if order can be deleted (e.g., not in certain states)
+            if order.get('state') in ['done', 'cancel']:
+                return Response(
+                    {"error": f"Cannot delete order in {order['state']} state"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        except NotFound as e:
-            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+            # Delete the sale order
+            odoo.call(
+                model='sale.order',
+                method='unlink',
+                args=[[int(pk)]]
+            )
+            
+            return Response(
+                {'message': 'Sale order deleted successfully'},
+                status=status.HTTP_200_OK
+            )
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

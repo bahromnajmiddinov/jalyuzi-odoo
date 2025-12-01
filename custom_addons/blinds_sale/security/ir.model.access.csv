@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_product_formula_user,access_product_formula_user,model_product_formula,base.group_user,1,1,1,1
+access_product_formula_wizard_user,access_product_formula_wizard_user,model_product_formula_wizard,base.group_user,1,1,1,1
+access_payment_proof_user,access_payment_proof_user,model_payment_proof,base.group_user,1,1,1,1
+access_product_measurement_wizard,access_product_measurement_wizard,model_product_measurement_wizard,base.group_user,1,1,1,1

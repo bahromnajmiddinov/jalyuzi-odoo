@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_saleorder_document_inherit" inherit_id="sale.report_saleorder_document">
+        <xpath expr="//th[@name='th_description']" position="after">
+            <th t-if="env['ir.config_parameter'].sudo().get_param('sale_order_line_image.show_product_image_sale_order')" class="text-start">Product Image</th>
+        </xpath>
+        <xpath expr="//td[@name='td_name']" position="after">
+            <td t-if="env['ir.config_parameter'].sudo().get_param('sale_order_line_image.show_product_image_sale_order')">
+                <t t-if="not line.is_downpayment">
+                    <img t-if="line.product_image" t-att-src="image_data_uri(line.product_image)" style="max-width: 50px; max-height: 50px;"/>
+                    <img t-if="not line.product_image" src="/web/static/img/placeholder.png" style="max-width: 50px; max-height: 50px;"/>
+                </t>
+            </td>
+        </xpath>
+    </template>
+</odoo>

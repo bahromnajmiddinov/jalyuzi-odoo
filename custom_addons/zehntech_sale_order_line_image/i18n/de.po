@@ -1,0 +1,104 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* zehntech_sale_order_line_image
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-17 10:12+0000\n"
+"PO-Revision-Date: 2025-09-17 16:04+0530\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.7\n"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model,name:zehntech_sale_order_line_image.model_res_config_settings
+msgid "Config Settings"
+msgstr "Konfigurationseinstellungen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,help:zehntech_sale_order_line_image.field_res_config_settings__show_product_image_invoice
+msgid "Display product images in invoice lines"
+msgstr "Produktbilder in Rechnungszeilen anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.res_config_settings_view_form
+msgid "Display product images in invoice lines and PDF reports"
+msgstr "Produktbilder in Rechnungszeilen und PDF-Berichten anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,help:zehntech_sale_order_line_image.field_res_config_settings__show_product_image_sale_order
+msgid "Display product images in sales order lines"
+msgstr "Produktbilder in Verkaufsauftragszeilen anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.res_config_settings_view_form
+msgid "Display product images in sales order lines and PDF reports"
+msgstr "Zeigen Sie Produktbilder in Verkaufsauftragszeilen und PDF-Berichten an"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model,name:zehntech_sale_order_line_image.model_account_move
+msgid "Journal Entry"
+msgstr "Tagebucheintrag"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model,name:zehntech_sale_order_line_image.model_account_move_line
+msgid "Journal Item"
+msgstr "Journalelement"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_account_move_line__product_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_sale_order_line__product_image
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.report_invoice_document_inherit
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.report_saleorder_document_inherit
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.sale_order_portal_content_inherit
+msgid "Product Image"
+msgstr "Produktbild"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model,name:zehntech_sale_order_line_image.model_sale_order
+msgid "Sales Order"
+msgstr "Kundenauftrag"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model,name:zehntech_sale_order_line_image.model_sale_order_line
+msgid "Sales Order Line"
+msgstr "Verkaufsauftragsposition"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_account_move_line__show_product_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_sale_order_line__show_product_image
+msgid "Show Product Image"
+msgstr "Produktbild anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_account_bank_statement_line__show_product_image_setting
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_account_move__show_product_image_setting
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_sale_order__show_product_image_setting
+msgid "Show Product Image Setting"
+msgstr "Produktbildeinstellung anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_res_config_settings__show_product_image_invoice
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.res_config_settings_view_form
+msgid "Show Product Image in Invoice"
+msgstr "Produktbild in der Rechnung anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,field_description:zehntech_sale_order_line_image.field_res_config_settings__show_product_image_sale_order
+#: model_terms:ir.ui.view,arch_db:zehntech_sale_order_line_image.res_config_settings_view_form
+msgid "Show Product Image in Sales Order"
+msgstr "Produktbild im Verkaufsauftrag anzeigen"
+
+#. module: zehntech_sale_order_line_image
+#: model:ir.model.fields,help:zehntech_sale_order_line_image.field_account_bank_statement_line__show_product_image_setting
+#: model:ir.model.fields,help:zehntech_sale_order_line_image.field_account_move__show_product_image_setting
+#: model:ir.model.fields,help:zehntech_sale_order_line_image.field_sale_order__show_product_image_setting
+msgid "Technical field to control image column visibility"
+msgstr "Technisches Feld zur Steuerung der Sichtbarkeit von Bildspalten"

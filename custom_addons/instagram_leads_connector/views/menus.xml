@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem id="menu_instagram_root" 
+              name="Instagram Leads" 
+              sequence="100"
+              web_icon="instagram_leads_connector,static/description/icon.png"/>
+</odoo>

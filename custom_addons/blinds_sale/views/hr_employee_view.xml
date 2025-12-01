@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <record id="hr_employee_inherit_form_password" model="ir.ui.view">
+        <field name="name">hr.employee.inherit</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.view_employee_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='coach_id']" position="after">
+                <field name="user_id" invisible="1"/>
+                <field name="is_delivery_person" invisible="user_id == False"/>
+                <field name="debt_amount" readonly="1" invisible="is_delivery_person == False"/>
+                <field name="total_sales" readonly="1" invisible="is_delivery_person == False"/>
+                <field name="total_payments" readonly="1" invisible="is_delivery_person == False"/>
+                <field name="debt_limit" invisible="is_delivery_person == False"/>
+                <field name="profit_percentage" invisible="is_delivery_person == False"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <record id="hr_employee_inherit_kanban_view" model="ir.ui.view">
+        <field name="name">hr.employee.inherit.kanban</field>
+        <field name="model">hr.employee</field>
+        <field name="inherit_id" ref="hr.hr_kanban_view_employees"/>
+        <field name="arch" type="xml">
+            <!-- Add fields to kanban root -->
+            <xpath expr="//kanban" position="attributes">
+                <attribute name="class">o_hr_employee_kanban</attribute>
+                <attribute name="sample">1</attribute>
+            </xpath>
+            
+            <!-- Add delivery fields to kanban -->
+            <xpath expr="//kanban" position="inside">
+                <field name="is_delivery_person"/>
+                <field name="debt_amount"/>
+                <field name="total_sales"/>
+                <field name="total_payments"/>
+                <field name="debt_limit"/>
+            </xpath>
+            
+            <!-- Add delivery badge near employee name -->
+            <xpath expr="//field[@name='name']" position="after">
+                <t t-if="record.is_delivery_person.raw_value">
+                    <span class="badge bg-primary ms-2">Delivery</span>
+                </t>
+            </xpath>
+            
+            <!-- Add delivery stats section -->
+            <!-- <xpath expr="//field[@name='employee_properties']" position="before">
+                <div t-if="record.is_delivery_person.raw_value" class="delivery-stats border-top pt-2 mt-2">
+                    <div t-if="record.is_delivery_person.raw_value" class="delivery-performance-table mt-2">
+                        
+                        <div class="d-flex justify-content-between text-muted small">
+                            <div class="flex-grow-1 text-center">Total</div>
+                            <div class="flex-grow-1 text-center">Paid</div>
+                            <div class="flex-grow-1 text-center">Outstanding</div>
+                        </div>
+                        
+                        
+                        <div class="d-flex justify-content-between">
+                            <div class="flex-grow-1 text-center">
+                                <field name="delivery_person_sales_amount" 
+                                       widget="monetary" 
+                                       options="{'currency_field': 'currency_id'}"
+                                       class="border-bottom pb-1"/>
+                            </div>
+                            <div class="flex-grow-1 text-center text-success">
+                                <field name="delivery_person_paid_amount" 
+                                       widget="monetary" 
+                                       options="{'currency_field': 'currency_id'}"
+                                       class="border-bottom pb-1"/>
+                            </div>
+                            <div class="flex-grow-1 text-center" 
+                                 t-att-class="record.delivery_person_sale_debt.raw_value > 0 ? 'text-danger border-bottom pb-1' : 'border-bottom pb-1'">
+                                <field name="delivery_person_sale_debt" 
+                                       widget="monetary" 
+                                       options="{'currency_field': 'currency_id'}"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div t-if="record.delivery_person_sale_debt_limit.raw_value > 0" class="mt-2">
+                        <div class="progress" style="height: 6px;">
+                            <div t-attf-class="progress-bar #{record.delivery_person_sale_debt.raw_value > record.delivery_person_sale_debt_limit.raw_value ? 'bg-danger' : 'bg-warning'}"
+                                 t-attf-style="width: #{Math.min(100, 100 * record.delivery_person_sale_debt.raw_value / record.delivery_person_sale_debt_limit.raw_value)}%"
+                                 role="progressbar">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Limit: <field name="delivery_person_sale_debt_limit" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                        </small>
+                    </div>
+                </div>
+            </xpath> -->
+        </field>
+    </record>
+</odoo>

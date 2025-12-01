@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Mobile App Template -->
+    <template id="mobile_app_template" name="Odoo Mobile App">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <meta name="mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-capable" content="yes"/>
+                <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+                <link rel="manifest" href="/manifest.json"/>
+                <meta name="theme-color" content="#714B67"/>
+            </t>
+            
+            <div id="mobile_app_root">
+                <!-- App Header -->
+                <div class="app-header">
+                    <button class="menu-btn" onclick="toggleMenu()">☰</button>
+                    <h1>Odoo Mobile</h1>
+                    <button class="menu-btn" onclick="showSearch()">🔍</button>
+                </div>
+                
+                <!-- Navigation Menu -->
+                <div class="nav-overlay" id="navOverlay" onclick="toggleMenu()"></div>
+                <div class="nav-menu" id="navMenu">
+                    <div class="nav-header">
+                        <h2>Menu</h2>
+                        <p><t t-esc="user.name"/></p>
+                    </div>
+                    <div class="nav-items">
+                        <div class="nav-item" onclick="loadDashboard()">
+                            <span class="nav-item-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </div>
+                        <div class="nav-item" onclick="loadModule('sale.order')">
+                            <span class="nav-item-icon">📋</span>
+                            <span>Sales Orders</span>
+                        </div>
+                        <div class="nav-item" onclick="loadModule('purchase.order')">
+                            <span class="nav-item-icon">🛒</span>
+                            <span>Purchases</span>
+                        </div>
+                        <div class="nav-item" onclick="loadModule('stock.picking')">
+                            <span class="nav-item-icon">📦</span>
+                            <span>Inventory</span>
+                        </div>
+                        <div class="nav-item" onclick="loadModule('res.partner')">
+                            <span class="nav-item-icon">👥</span>
+                            <span>Contacts</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Install Prompt -->
+                <div class="install-prompt" id="installPrompt" style="display: none;">
+                    <div>
+                        <strong>Install Odoo Mobile</strong>
+                        <p style="font-size: 14px; margin-top: 5px;">Add to home screen</p>
+                    </div>
+                    <button class="install-btn" onclick="installApp()">Install</button>
+                </div>
+                
+                <!-- Content Area -->
+                <div class="content-area" id="contentArea">
+                    <div class="loading">Loading...</div>
+                </div>
+                
+                <!-- FAB -->
+                <button class="fab" onclick="createNew()">+</button>
+            </div>
+        </t>
+    </template>
+</odoo>

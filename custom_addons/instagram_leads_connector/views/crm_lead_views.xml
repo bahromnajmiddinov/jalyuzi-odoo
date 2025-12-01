@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="crm_lead_view_form_inherit" model="ir.ui.view">
+        <field name="name">crm.lead.form.inherit</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.crm_lead_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='source_id']" position="after">
+                <field name="fb_lead_id" readonly="1" 
+                       invisible="fb_lead_id == False"/>
+                <field name="instagram_form_id" readonly="1"
+                       invisible="instagram_form_id == False"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.sale.order.line.image</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="20"/>
+        <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='catalog_setting_container']" position="inside">
+                <setting string="Show Product Image in Sales Order" help="Display product images in sales order lines and PDF reports">
+                    <field name="show_product_image_sale_order"/>
+                </setting>
+                <setting string="Show Product Image in Invoice" help="Display product images in invoice lines and PDF reports">
+                    <field name="show_product_image_invoice"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

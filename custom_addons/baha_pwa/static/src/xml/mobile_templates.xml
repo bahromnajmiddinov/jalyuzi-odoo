@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Main Mobile App Template -->
+    <t t-name="baha_pwa.MobileApp" owl="1">
+        <div class="mobile-app-container">
+            
+            <!-- App Header -->
+            <div class="app-header">
+                <button class="menu-btn" t-on-click="toggleMenu">
+                    ☰
+                </button>
+                <h1>Odoo Mobile</h1>
+                <button class="menu-btn" t-on-click="() => this.state.currentView = 'search'">
+                    🔍
+                </button>
+            </div>
+            
+            <!-- Navigation Overlay -->
+            <div class="nav-overlay" 
+                 t-att-class="{ active: state.menuOpen }"
+                 t-on-click="toggleMenu"/>
+            
+            <!-- Navigation Menu -->
+            <div class="nav-menu" t-att-class="{ active: state.menuOpen }">
+                <div class="nav-header">
+                    <h2>Menu</h2>
+                    <p t-esc="state.user.name or 'User'"/>
+                </div>
+                
+                <div class="nav-items">
+                    <div class="nav-item" t-on-click="loadDashboard">
+                        <span class="nav-item-icon">🏠</span>
+                        <span class="nav-item-text">Dashboard</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('sale.order', 'Sales Orders')">
+                        <span class="nav-item-icon">📋</span>
+                        <span class="nav-item-text">Sales Orders</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('purchase.order', 'Purchase Orders')">
+                        <span class="nav-item-icon">🛒</span>
+                        <span class="nav-item-text">Purchase Orders</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('stock.picking', 'Inventory')">
+                        <span class="nav-item-icon">📦</span>
+                        <span class="nav-item-text">Inventory</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('res.partner', 'Contacts')">
+                        <span class="nav-item-icon">👥</span>
+                        <span class="nav-item-text">Contacts</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('account.move', 'Invoices')">
+                        <span class="nav-item-icon">💰</span>
+                        <span class="nav-item-text">Invoices</span>
+                    </div>
+                    
+                    <div class="nav-item" t-on-click="() => this.loadModule('product.product', 'Products')">
+                        <span class="nav-item-icon">📦</span>
+                        <span class="nav-item-text">Products</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Install Prompt -->
+            <div class="install-prompt" t-if="state.installPromptVisible">
+                <div class="install-prompt-content">
+                    <h3>Install Odoo Mobile</h3>
+                    <p>Add to home screen for quick access</p>
+                </div>
+                <button class="install-btn" t-on-click="installApp">
+                    Install
+                </button>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard View -->
+                <t t-if="state.currentView === 'dashboard'">
+                    <t t-call="baha_pwa.DashboardView"/>
+                </t>
+                
+                <!-- List View -->
+                <t t-if="state.currentView === 'list'">
+                    <t t-call="baha_pwa.ListView"/>
+                </t>
+                
+                <!-- Loading State -->
+                <t t-if="state.loading">
+                    <div class="loading">
+                        <div class="loading-spinner"/>
+                        <p>Loading...</p>
+                    </div>
+                </t>
+            </div>
+            
+            <!-- Floating Action Button -->
+            <button class="fab" t-on-click="createNewRecord" t-if="state.currentView !== 'dashboard'">
+                +
+            </button>
+        </div>
+    </t>
+
+    <!-- Dashboard View Template -->
+    <t t-name="baha_pwa.DashboardView" owl="1">
+        <div class="dashboard-view">
+            <div class="dashboard-cards">
+                <div class="dashboard-card" t-on-click="() => this.loadModule('sale.order', 'Sales')">
+                    <div class="dashboard-card-icon">📊</div>
+                    <div class="dashboard-card-title">Sales Orders</div>
+                    <div class="dashboard-card-value">
+                        <t t-esc="state.dashboardData.sales || 0"/>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card" t-on-click="() => this.loadModule('purchase.order', 'Purchases')">
+                    <div class="dashboard-card-icon">🛒</div>
+                    <div class="dashboard-card-title">Purchases</div>
+                    <div class="dashboard-card-value">
+                        <t t-esc="state.dashboardData.purchases || 0"/>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card" t-on-click="() => this.loadModule('stock.picking', 'Deliveries')">
+                    <div class="dashboard-card-icon">📦</div>
+                    <div class="dashboard-card-title">Deliveries</div>
+                    <div class="dashboard-card-value">
+                        <t t-esc="state.dashboardData.deliveries || 0"/>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card" t-on-click="() => this.loadModule('res.partner', 'Contacts')">
+                    <div class="dashboard-card-icon">👥</div>
+                    <div class="dashboard-card-title">Contacts</div>
+                    <div class="dashboard-card-value">
+                        <t t-esc="state.dashboardData.contacts || 0"/>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="section-header">Quick Actions</h3>
+            <div class="record-list">
+                <div class="record-item" t-on-click="() => this.loadModule('sale.order', 'Sales')">
+                    <div class="record-content">
+                        <div class="record-title">Create Sales Order</div>
+                        <div class="record-subtitle">Start a new sales order</div>
+                    </div>
+                    <span class="record-arrow">›</span>
+                </div>
+                
+                <div class="record-item" t-on-click="() => this.loadModule('res.partner', 'Contacts')">
+                    <div class="record-content">
+                        <div class="record-title">Add Contact</div>
+                        <div class="record-subtitle">Create a new customer or supplier</div>
+                    </div>
+                    <span class="record-arrow">›</span>
+                </div>
+                
+                <div class="record-item" t-on-click="() => this.loadModule('product.product', 'Products')">
+                    <div class="record-content">
+                        <div class="record-title">View Products</div>
+                        <div class="record-subtitle">Browse product catalog</div>
+                    </div>
+                    <span class="record-arrow">›</span>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- List View Template -->
+    <t t-name="baha_pwa.ListView" owl="1">
+        <div class="list-view">
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <span class="search-bar-icon">🔍</span>
+                <input 
+                    type="text" 
+                    placeholder="Search..." 
+                    t-model="state.searchQuery"
+                    t-on-input="searchRecords"/>
+            </div>
+            
+            <!-- Records List -->
+            <div class="record-list" t-if="filteredRecords.length > 0">
+                <t t-foreach="filteredRecords" t-as="record" t-key="record.id">
+                    <div class="record-item" t-on-click="() => this.viewRecord(record.id)">
+                        <div class="record-content">
+                            <div class="record-title">
+                                <t t-esc="record.display_name"/>
+                            </div>
+                            <div class="record-subtitle" t-if="record.create_date">
+                                <t t-esc="formatDate(record.create_date)"/>
+                            </div>
+                        </div>
+                        <span class="record-arrow">›</span>
+                    </div>
+                </t>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state" t-if="!state.loading and filteredRecords.length === 0">
+                <div class="empty-state-icon">📭</div>
+                <div class="empty-state-title">No Records Found</div>
+                <div class="empty-state-text">
+                    <t t-if="state.searchQuery">
+                        Try adjusting your search query
+                    </t>
+                    <t t-else="">
+                        No records available yet
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Record Detail View Template (for future use) -->
+    <t t-name="baha_pwa.RecordDetail" owl="1">
+        <div class="record-detail">
+            <div class="detail-header">
+                <button class="back-btn" t-on-click="() => this.state.currentView = 'list'">
+                    ‹ Back
+                </button>
+            </div>
+            
+            <div class="detail-content">
+                <!-- Record details will be rendered here -->
+                <div class="detail-field">
+                    <div class="detail-field-label">Name</div>
+                    <div class="detail-field-value">Record Name</div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

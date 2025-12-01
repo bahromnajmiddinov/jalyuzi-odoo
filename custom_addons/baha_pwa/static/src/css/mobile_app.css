@@ -1,0 +1,567 @@
+/* Odoo Mobile PWA Styles */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #714B67;
+    --primary-dark: #5a3a52;
+    --primary-light: #875A7B;
+    --accent-color: #00A09D;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --background-color: #f5f5f5;
+    --card-background: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #e0e0e0;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 
+                 Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* App Container */
+.mobile-app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.app-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    min-height: 56px;
+}
+
+.app-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+    text-align: center;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Navigation Menu */
+.nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.nav-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.nav-menu {
+    background: var(--card-background);
+    position: fixed;
+    left: -300px;
+    top: 0;
+    width: 280px;
+    max-width: 85vw;
+    height: 100vh;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.nav-menu.active {
+    left: 0;
+}
+
+.nav-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 24px 20px;
+}
+
+.nav-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.nav-header p {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.nav-items {
+    padding: 8px 0;
+}
+
+.nav-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.nav-item:last-child {
+    border-bottom: none;
+}
+
+.nav-item:hover {
+    background: #f8f9fa;
+}
+
+.nav-item:active {
+    background: #e9ecef;
+}
+
+.nav-item-icon {
+    font-size: 24px;
+    width: 32px;
+    text-align: center;
+}
+
+.nav-item-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Dashboard Cards */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dashboard-card {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-card:active {
+    transform: translateY(0);
+}
+
+.dashboard-card-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    filter: grayscale(0.3);
+}
+
+.dashboard-card-title {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.dashboard-card-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Search Bar */
+.search-bar {
+    background: var(--card-background);
+    border-radius: 24px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+}
+
+.search-bar-icon {
+    color: var(--text-secondary);
+    font-size: 20px;
+}
+
+.search-bar input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.search-bar input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* Record List */
+.record-list {
+    background: var(--card-background);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.record-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.record-item:last-child {
+    border-bottom: none;
+}
+
+.record-item:hover {
+    background: #f8f9fa;
+}
+
+.record-item:active {
+    background: #e9ecef;
+}
+
+.record-content {
+    flex: 1;
+}
+
+.record-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.record-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.record-arrow {
+    color: var(--text-secondary);
+    font-size: 20px;
+}
+
+/* Floating Action Button */
+.fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    border: none;
+    font-size: 28px;
+    box-shadow: 0 4px 12px rgba(113, 75, 103, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.fab:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(113, 75, 103, 0.5);
+}
+
+.fab:active {
+    transform: scale(0.95);
+}
+
+/* Install Prompt */
+.install-prompt {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 16px 20px;
+    margin: 16px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.install-prompt-content h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.install-prompt-content p {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.install-btn {
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+    white-space: nowrap;
+}
+
+.install-btn:hover {
+    transform: scale(1.05);
+}
+
+.install-btn:active {
+    transform: scale(0.95);
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 16px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.empty-state-text {
+    font-size: 14px;
+}
+
+/* Section Headers */
+.section-header {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 24px 0 12px 0;
+    color: var(--text-primary);
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+}
+
+.badge-danger {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+}
+
+.badge-warning {
+    background: rgba(255, 193, 7, 0.1);
+    color: #e0a800;
+}
+
+.badge-info {
+    background: rgba(23, 162, 184, 0.1);
+    color: var(--info-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .app-header h1 {
+        font-size: 18px;
+    }
+    
+    .dashboard-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .content-area {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-card-value {
+        font-size: 24px;
+    }
+    
+    .dashboard-card-icon {
+        font-size: 40px;
+    }
+}
+
+/* Safe Area for iOS devices */
+@supports (padding: max(0px)) {
+    .app-header {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+        padding-top: max(12px, env(safe-area-inset-top));
+    }
+    
+    .nav-menu {
+        padding-left: env(safe-area-inset-left);
+    }
+    
+    .fab {
+        right: max(20px, env(safe-area-inset-right));
+        bottom: max(20px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Disable text selection on buttons and nav items */
+.menu-btn,
+.nav-item,
+.dashboard-card,
+.record-item,
+.fab,
+.install-btn {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Touch feedback */
+.menu-btn:active,
+.nav-item:active,
+.dashboard-card:active,
+.record-item:active,
+.fab:active,
+.install-btn:active {
+    opacity: 0.8;
+}

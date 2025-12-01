@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_move_form_inherit_image" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.image</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <!-- Add image column in list view -->
+            <xpath expr="//field[@name='invoice_line_ids']//list//field[@name='product_id']" position="after">
+                <field name="product_image" widget="image" options="{'size': [50, 50]}"  
+                       column_invisible="not parent.show_product_image_setting"/>
+            </xpath>
+            <!-- Add the setting field to account move -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="show_product_image_setting" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

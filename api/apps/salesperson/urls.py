@@ -1,0 +1,18 @@
+from django.urls import path
+
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
+
+from .views import DeliveryPersonLoginAPIView, DeliveryPersonAPIView, test_websocket
+
+
+urlpatterns = [
+    path('login/', DeliveryPersonLoginAPIView.as_view(), name='salesperson_login'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('me/', DeliveryPersonAPIView.as_view(), name='me'),
+    path('test-websocket/', test_websocket, name='test_websocket'),
+]

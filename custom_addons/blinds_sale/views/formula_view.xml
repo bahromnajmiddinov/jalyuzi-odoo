@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- list View -->
+    <record id="view_product_formula_list" model="ir.ui.view">
+        <field name="name">product.formula.list</field>
+        <field name="model">product.formula</field>
+        <field name="arch" type="xml">
+            <list string="Product Formulas">
+                <field name="name"/>
+                <field name="formula"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_product_formula_form" model="ir.ui.view">
+        <field name="name">product.formula.form</field>
+        <field name="model">product.formula</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="formula"/>
+                        <field name="remains_formula"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_product_formula_kanban" model="ir.ui.view">
+        <field name="name">product.formula.kanban</field>
+        <field name="model">product.formula</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="name"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <strong><field name="name"/></strong>
+                            <div><field name="formula"/></div>
+                            <div><field name="remains_formula"/></div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_product_formula" model="ir.actions.act_window">
+        <field name="name">Product Formulas</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">product.formula</field>
+        <field name="view_mode">list,form,kanban</field>
+    </record>
+
+    <menuitem id="blinds_sale.menu_product_formula" 
+              name="Product Formulas" 
+              parent="sale.menu_sale_config"
+              action="action_product_formula"
+              sequence="10"
+        />
+</odoo>

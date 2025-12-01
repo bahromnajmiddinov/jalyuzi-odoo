@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_instagram_config_user,instagram.config.user,model_instagram_config,sales_team.group_sale_salesman,1,1,1,0
+access_instagram_config_manager,instagram.config.manager,model_instagram_config,sales_team.group_sale_manager,1,1,1,1
+access_instagram_lead_form_user,instagram.lead.form.user,model_instagram_lead_form,sales_team.group_sale_salesman,1,1,1,0
+access_instagram_lead_form_manager,instagram.lead.form.manager,model_instagram_lead_form,sales_team.group_sale_manager,1,1,1,1

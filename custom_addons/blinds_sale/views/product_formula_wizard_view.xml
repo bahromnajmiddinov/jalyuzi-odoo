@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_product_formula_wizard_form" model="ir.ui.view">
+        <field name="name">product.formula.wizard.form</field>
+        <field name="model">product.formula.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Formula Calculator">
+                <sheet>
+                    <group>
+                        <field name="formula_id" readonly="1"/>
+                        <field name="product_id" readonly="1"/>
+                        <group name="dynamic_fields_group" colspan="4">
+                            <field name="height"/>
+                            <field name="width"/>
+                            <field name="count"/>
+                            <field name="take_remains"/>
+                        </group>
+                        <field name="result"/>
+                    </group>
+                    <footer>
+                        <button name="apply_formula" string="Calculate" type="object" class="btn-primary" context="{'from_ui':False}"/>
+                        <!-- <button string="Save" type="object" class="btn-primary" special="cancel"/> -->
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_measurement_formula_wizard" model="ir.ui.view">
+        <field name="name">Formula Calculator</field>
+        <field name="model">product.measurement.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Formula Calculator" create="false" edit="false" delete="false">
+                <sheet>
+                    <group>
+                        <field name="product_id" readonly="1"/>
+                        <field name="formula_id" readonly="1"/>
+                        <field name="height" readonly="1"/>
+                        <field name="width" readonly="1"/>
+                        <field name="count" readonly="1"/>
+                        <field name="take_remains" readonly="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

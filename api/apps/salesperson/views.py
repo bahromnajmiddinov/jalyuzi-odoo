@@ -304,7 +304,7 @@ class DeliveryPersonAPIView(GenericAPIView):
             odoo_user = odoo_user[0]
             
             # Get partner details if needed (for additional fields)
-            partner_id = odoo_user['partner_id'][0] if odoo_user.get('partner_id') else None
+            partner_id = odoo_user.get('partner_id') if odoo_user.get('partner_id') else None
             
             delivery_person_data = {
                 'name': odoo_user.get('name'),
@@ -315,21 +315,26 @@ class DeliveryPersonAPIView(GenericAPIView):
             
             # If you have custom fields on res.partner for delivery stats, fetch them
             if partner_id:
-                partner_data = odoo.call(
-                    'res.partner',
-                    'read',
-                    args=[[partner_id]],
-                    kwargs={
-                        'fields': [
-                            'delivery_person_sale_debt',
-                            'delivery_person_sale_debt_limit',
-                            'delivery_person_sales_amount'
-                        ]
-                    }
-                )
+                # partner_data = odoo.call(
+                #     'res.partner',
+                #     'read',
+                #     args=[[partner_id]],
+                #     kwargs={
+                #         'fields': [
+                #             'delivery_person_sale_debt',
+                #             'delivery_person_sale_debt_limit',
+                #             'delivery_person_sales_amount'
+                #         ]
+                #     }
+                # )
+                partner_data = {
+                    'delivery_person_sale_debt': partner_id.get('delivery_person_sale_debt', 0.0),
+                    'delivery_person_sale_debt_limit': partner_id.get('delivery_person_sale_debt_limit', 0.0),
+                    'delivery_person_sales_amount': partner_id.get('delivery_person_sales_amount', 0.0),
+                }
                 
                 if partner_data:
-                    delivery_person_data.update(partner_data[0])
+                    delivery_person_data.update(partner_data)
 
             # Fetch sales statistics
             # Assuming sale.order has a field linking to the delivery user

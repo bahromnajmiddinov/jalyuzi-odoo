@@ -222,7 +222,6 @@ class CustomerListAPIView(GenericAPIView):
                     'zip': validated_data.get('zip'),
                     'email': validated_data.get('email', False),
                     'mobile': validated_data.get('mobile', False),
-                    'customer': True,  # Mark as customer
                     'type': 'contact',  # Set as contact type
                 }]
             )

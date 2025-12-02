@@ -141,8 +141,7 @@ class DeliveryPersonLoginAPIView(GenericAPIView):
                     {'detail': 'User not found'}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
-
-            odoo_user = users[0]
+            odoo_user = users['result'][0]
             
         except Exception as e:
             cache.set(rate_limit_key, attempts + 1, 300)

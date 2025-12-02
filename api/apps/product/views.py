@@ -123,7 +123,7 @@ class ProductListAPIView(GenericAPIView):
                         'domain': domain,
                         'fields': [
                             'id', 'name', 'default_code', 'list_price',
-                            'uom_id', 'formula_id', 'image_1920', 'taxes_id',
+                            'uom_id', 'formula_id', 'image_url_1920', 'taxes_id',
                             'uom_name', 'standard_price', 'categ_id', 'product_tag_ids',
                             'qty_available',
                         ]
@@ -192,7 +192,7 @@ class ProductRetrieveAPIView(GenericAPIView):
                     'domain': [('id', '=', int(id))],
                     'fields': [
                         'id', 'name', 'default_code', 'list_price',
-                        'uom_id', 'formula_id', 'image_1920', 'taxes_id',
+                        'uom_id', 'formula_id', 'image_url_1920', 'taxes_id',
                         'uom_name', 'standard_price', 'categ_id', 'product_tag_ids', 
                         'qty_available'
                     ],
@@ -633,7 +633,7 @@ class ProductFullAPIView(GenericAPIView):
                     'domain': domain,
                     'fields': [
                         'id', 'name', 'default_code', 'list_price',
-                        'uom_id', 'image_1920', 'taxes_id', 'standard_price',
+                        'uom_id', 'image_url_1920', 'taxes_id', 'standard_price',
                         'categ_id', 'product_tag_ids', 'qty_available',
                         'product_variant_ids',
                         'attribute_line_ids',

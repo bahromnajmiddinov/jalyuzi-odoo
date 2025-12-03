@@ -86,7 +86,7 @@ class OdooRESTClient:
         cache.delete(self.cache_key)
         self._login()
 
-    def call(self, model, method, args=None, kwargs=None, limit=None, offset=None):
+    def call(self, model, method, args=None, kwargs=None, limit=None, offset=None, relation_fields=None):
         """
         Call Odoo model method with automatic session refresh and pagination support.
         
@@ -97,6 +97,8 @@ class OdooRESTClient:
             kwargs: Keyword arguments
             limit: Number of records to return (pagination)
             offset: Number of records to skip (pagination)
+            relation_fields: Dict specifying which fields to include in relations
+                           e.g. {"categ_id": ["id", "name"], "uom_id": ["id", "name", "uom_type"]}
         
         Returns:
             Dict with:
@@ -118,6 +120,10 @@ class OdooRESTClient:
         if limit is not None:
             payload["limit"] = limit
             payload["offset"] = offset or 0
+            
+        # Add relation field filtering
+        if relation_fields is not None:
+            payload["relation_fields"] = relation_fields
         
         headers = {
             "Content-Type": "application/json",
@@ -218,12 +224,12 @@ if __name__ == "__main__":
         password="user_password"
     )
 
-    # Example with pagination
+    # Example 1: Basic pagination
     result = client.call(
         model='sale.order',
         method='search_read',
         args=[[('state', '=', 'sale')]],
-        kwargs={'fields': ['name', 'amount_total', 'state']},
+        kwargs={'fields': ['name', 'amount_total', 'state', 'partner_id']},
         limit=10,
         offset=0
     )
@@ -231,4 +237,27 @@ if __name__ == "__main__":
     print("Orders:", result.get('result'))
     print(f"Total: {result.get('total_count')}, Has more: {result.get('has_more')}")
     
+    # Example 2: With relation field filtering
+    result = client.call(
+        model='product.template',
+        method='search_read',
+        kwargs={
+            'domain': [('sale_ok', '=', True)],
+            'fields': ['id', 'name', 'list_price', 'categ_id', 'uom_id']
+        },
+        limit=20,
+        offset=0,
+        relation_fields={
+            'categ_id': ['id', 'name'],  # Only get id and name from category
+            'uom_id': ['id', 'name', 'uom_type']  # Get id, name, and type from UOM
+        }
+    )
+    
+    print("\nProducts with limited relation fields:")
+    for product in result.get('result', []):
+        print(f"- {product['name']}")
+        print(f"  Category: {product.get('categ_id')}")
+        print(f"  UOM: {product.get('uom_id')}")
+    
     client.logout()
+    

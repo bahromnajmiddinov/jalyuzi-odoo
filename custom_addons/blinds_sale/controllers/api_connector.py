@@ -16,10 +16,15 @@ class DynamicOdooCall(http.Controller):
         
         # Pagination parameters
         limit = data.get("limit")
-        offset = data.get("offset", 0)
+        offset = data.get("offset", 4)
+        
+        # Field filtering for relations
+        relation_fields = data.get("relation_fields", {})
+        # Example: {"categ_id": ["id", "name"], "uom_id": ["id", "name", "uom_type"]}
         
         print(f"Received request to call {model}.{method} with args: {args} and kwargs: {kwargs}")
         print(f"Pagination: limit={limit}, offset={offset}")
+        print(f"Relation fields filter: {relation_fields}")
         
         if not model or not method:
             return {"error": "Model and method are required"}
@@ -57,11 +62,11 @@ class DynamicOdooCall(http.Controller):
             # Serialize based on result type
             if method in ['search_read', 'read']:
                 if isinstance(result, list):
-                    result = [self.process_dict_result(record, model_obj, depth=depth) for record in result]
+                    result = [self.process_dict_result(record, model_obj, depth=depth, relation_fields=relation_fields) for record in result]
             elif hasattr(result, "ids"):
-                result = [self.serialize_record(rec, depth=depth) for rec in result]
+                result = [self.serialize_record(rec, depth=depth, relation_fields=relation_fields) for rec in result]
             elif hasattr(result, "id"):
-                result = self.serialize_record(result, depth=depth)
+                result = self.serialize_record(result, depth=depth, relation_fields=relation_fields)
 
             # Return with pagination metadata
             response = {"result": result}
@@ -77,13 +82,21 @@ class DynamicOdooCall(http.Controller):
             print(f"Error calling {model}.{method}: {e}")
             return {"error": str(e)}
     
-    def process_dict_result(self, data_dict, model_obj, depth=1):
+    def process_dict_result(self, data_dict, model_obj, depth=1, relation_fields=None):
         """
         Process a dictionary result from search_read/read to expand relational fields.
+        
+        Args:
+            data_dict: Dictionary from search_read/read
+            model_obj: The model object to get field info
+            depth: How deep to serialize nested relations
+            relation_fields: Dict of field_name -> list of fields to include
+                            e.g. {"categ_id": ["id", "name"], "uom_id": ["id", "name"]}
         """
         if depth <= 0:
             return data_dict
         
+        relation_fields = relation_fields or {}
         result = data_dict.copy()
         
         for field_name in data_dict.keys():
@@ -93,28 +106,50 @@ class DynamicOdooCall(http.Controller):
             field = model_obj._fields[field_name]
             value = data_dict[field_name]
             
+            # Get allowed fields for this relation
+            allowed_fields = relation_fields.get(field_name)
+            
+            # Many2one field - usually returns [id, name]
             if field.type == "many2one" and value:
                 if isinstance(value, (list, tuple)) and len(value) >= 1:
                     record_id = value[0] if isinstance(value[0], int) else value
                     related_record = request.env[field.comodel_name].browse(record_id)
                     if related_record.exists():
-                        result[field_name] = self.serialize_record(related_record, depth=depth-1)
+                        result[field_name] = self.serialize_record(
+                            related_record, 
+                            depth=depth-1, 
+                            relation_fields=relation_fields,
+                            allowed_fields=allowed_fields
+                        )
                     else:
                         result[field_name] = None
             
+            # One2many / Many2many - usually returns list of IDs
             elif field.type in ("one2many", "many2many") and value:
                 if isinstance(value, list) and value:
                     related_records = request.env[field.comodel_name].browse(value)
                     result[field_name] = [
-                        self.serialize_record(rec, depth=depth-1)
+                        self.serialize_record(
+                            rec, 
+                            depth=depth-1, 
+                            relation_fields=relation_fields,
+                            allowed_fields=allowed_fields
+                        )
                         for rec in related_records if rec.exists()
                     ]
         
         return result
     
-    def serialize_record(self, record, depth=1, visited=None):
+    def serialize_record(self, record, depth=1, visited=None, relation_fields=None, allowed_fields=None):
         """
         Convert an Odoo record into JSON-safe nested object.
+        
+        Args:
+            record: Odoo recordset
+            depth: How deep to serialize nested relations (0 = IDs only, 1+ = full data)
+            visited: Set of already serialized record IDs to prevent circular refs
+            relation_fields: Dict of field_name -> list of fields to include for nested relations
+            allowed_fields: List of fields to include for THIS record (None = all fields)
         """
         if not record:
             return {}
@@ -122,24 +157,43 @@ class DynamicOdooCall(http.Controller):
         if visited is None:
             visited = set()
         
+        # Prevent circular references
         record_key = f"{record._name}_{record.id}"
         if record_key in visited:
             return {"id": record.id, "name": record.display_name}
         
         visited.add(record_key)
+        relation_fields = relation_fields or {}
         data = {}
 
         for field_name, field in record._fields.items():
+            # Skip field if allowed_fields is specified and field is not in the list
+            if allowed_fields is not None and field_name not in allowed_fields:
+                continue
+                
             value = record[field_name]
 
+            # Basic fields
             if field.type in ("char", "text", "float", "integer", "boolean", "monetary", "date", "datetime", "selection"):
                 data[field_name] = value
 
+            # Many2one field
             elif field.type == "many2one":
                 if value:
+                    # Get allowed fields for this specific relation
+                    nested_allowed_fields = relation_fields.get(field_name)
+                    
                     if depth > 0:
-                        data[field_name] = self.serialize_record(value, depth=depth-1, visited=visited.copy())
+                        # Full nested object
+                        data[field_name] = self.serialize_record(
+                            value, 
+                            depth=depth-1, 
+                            visited=visited.copy(), 
+                            relation_fields=relation_fields,
+                            allowed_fields=nested_allowed_fields
+                        )
                     else:
+                        # Just ID and name
                         data[field_name] = {
                             "id": value.id,
                             "name": value.display_name,
@@ -147,19 +201,33 @@ class DynamicOdooCall(http.Controller):
                 else:
                     data[field_name] = None
 
+            # One2many / Many2many fields
             elif field.type in ("one2many", "many2many"):
+                # Get allowed fields for this specific relation
+                nested_allowed_fields = relation_fields.get(field_name)
+                
                 if depth > 0:
+                    # Full nested objects
                     data[field_name] = [
-                        self.serialize_record(rec, depth=depth-1, visited=visited.copy())
+                        self.serialize_record(
+                            rec, 
+                            depth=depth-1, 
+                            visited=visited.copy(), 
+                            relation_fields=relation_fields,
+                            allowed_fields=nested_allowed_fields
+                        )
                         for rec in value
                     ]
                 else:
+                    # Just IDs and names
                     data[field_name] = [
                         {"id": rec.id, "name": rec.display_name}
                         for rec in value
                     ]
 
+            # Binary field
             elif field.type == "binary":
                 data[field_name] = value.decode() if value else ""
 
         return data
+    

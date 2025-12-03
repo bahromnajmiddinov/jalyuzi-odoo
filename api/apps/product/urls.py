@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (ProductListAPIView, ProductRetrieveAPIView, 
                     ProductCategoryListAPIView, ProductTagListAPIView, 
                     ProductFormulaRetrieveAPIView, ProductFormulaCalculateAPIView,
-                    ProductFullAPIView)
+                    ProductFullAPIView, ProductFullRetrieveAPIView)
 
 
 urlpatterns = [
@@ -14,4 +14,5 @@ urlpatterns = [
     path('formulas/<int:id>/', ProductFormulaRetrieveAPIView.as_view(), name='product_formulas_list'),
     path('formulas/calculate/', ProductFormulaCalculateAPIView.as_view(), name='product_formula_calculate'),
     path('full/', ProductFullAPIView.as_view(), name='products_full'),
+    path('full/<int:id>/', ProductFullRetrieveAPIView.as_view(), name='product_full_retrieve'),
 ]

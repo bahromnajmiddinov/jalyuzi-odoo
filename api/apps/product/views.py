@@ -596,7 +596,7 @@ class ProductFullAPIView(GenericAPIView):
         
         # Pagination parameters
         page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
+        page_size = int(request.query_params.get('page_size', 20))
         
         # Limit max page size to prevent abuse
         page_size = min(page_size, 100)
@@ -625,7 +625,7 @@ class ProductFullAPIView(GenericAPIView):
             if isinstance(odoo, Response):
                 return odoo
 
-            # Call Odoo with pagination
+            # Call Odoo with pagination and relation field filtering
             result = odoo.call(
                 model='product.template',
                 method='search_read',
@@ -641,7 +641,18 @@ class ProductFullAPIView(GenericAPIView):
                     ]
                 },
                 limit=page_size,
-                offset=offset
+                offset=offset,
+                relation_fields={
+                    # Limit fields in related records for better performance
+                    'categ_id': ['id', 'name', 'complete_name'],
+                    'uom_id': ['id', 'name', 'uom_type'],
+                    'product_tag_ids': ['id', 'name', 'color'],
+                    'taxes_id': ['id', 'name', 'amount', 'type_tax_use'],
+                    'product_variant_ids': ['id', 'display_name', 'default_code', 'barcode'],
+                    'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
+                    'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
+                    'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
+                }
             )
 
             # Extract pagination metadata
@@ -664,6 +675,72 @@ class ProductFullAPIView(GenericAPIView):
                 }
             })
 
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ProductFullRetrieveAPIView(GenericAPIView):
+    """
+    Retrieve a single product by ID with full details.
+    """
+    
+    @extend_schema(
+        responses={200: ProductSerializer},
+        summary="Retrieve a product by ID with full details",
+    )
+    def get(self, request, id):
+        try:
+            user = request.user
+            odoo = get_odoo_client_with_cached_session(username=user.username)
+            
+            # Check if odoo is a Response (error response)
+            if isinstance(odoo, Response):
+                return odoo
+
+            # Get product from Odoo with relation field filtering
+            result = odoo.call(
+                model='product.template',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', int(id))],
+                    'fields': [
+                        'id', 'name', 'default_code', 'list_price',
+                        'uom_id', 'image_url_1920', 'taxes_id', 'standard_price',
+                        'categ_id', 'product_tag_ids', 'qty_available',
+                        'product_variant_ids',
+                        'attribute_line_ids',
+                        'combo_ids',
+                    ],
+                    'limit': 1
+                },
+                relation_fields={
+                    # Limit fields in related records for better performance
+                    'categ_id': ['id', 'name', 'complete_name'],
+                    'uom_id': ['id', 'name', 'uom_type'],
+                    'product_tag_ids': ['id', 'name', 'color'],
+                    'taxes_id': ['id', 'name', 'amount', 'type_tax_use'],
+                    'product_variant_ids': ['id', 'display_name', 'default_code', 'barcode'],
+                    'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
+                    'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
+                    'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
+                }
+            )
+            
+            products = result.get('result', [])
+            
+            if not products:
+                raise NotFound("Product not found.")
+            
+            return Response(products[0], status=status.HTTP_200_OK)
+
+        except NotFound as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
             return Response(
                 {"error": str(e)}, 

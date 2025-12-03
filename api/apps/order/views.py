@@ -133,6 +133,14 @@ class OrderListAPIView(GenericAPIView):
                         'amount_untaxed', 'amount_tax',
                     ],
                 },
+                relation_fields={
+                    # Limit fields in related records for better performance
+                    'user_id': ['id', 'name', 'email'],
+                    'payment_proof_ids': ['id', 'name', 'payment_date', 'amount', 'state'],
+                    'product_tag_ids': ['id', 'name', 'color'],
+                    'order_line': ['id', 'product_id', 'product_uom_qty', 'price_unit', 'price_subtotal'],
+                    'partner_id': ['id', 'name', 'email', 'phone'],
+                },
                 limit=page_size,
                 offset=offset
             )
@@ -315,57 +323,23 @@ class OrderDetailAPIView(GenericAPIView):
                         'payment_proof_ids',
                     ],
                     'limit': 1
-                }
+                },
+                relation_fields={
+                    # Limit fields in related records for better performance
+                    'user_id': ['id', 'name', 'email'],
+                    'payment_proof_ids': ['id', 'name', 'payment_date', 'amount', 'state'],
+                    'product_tag_ids': ['id', 'name', 'color'],
+                    'order_line': ['id', 'product_id', 'product_uom_qty', 'price_unit', 'price_subtotal'],
+                    'partner_id': ['id', 'name', 'email', 'phone'],
+                    'product_id': ['id', 'name', 'list_price'],
+                },
             )
             
-            orders = result.get('result', [])
+            order = result.get('result', [])
             
-            if not orders:
+            if not order:
                 raise NotFound("Order not found or you don't have permission to view it")
 
-            order = orders[0]
-            
-            # Get order lines with product images
-            order_lines_result = odoo.call(
-                model='sale.order.line',
-                method='search_read',
-                kwargs={
-                    'domain': [('order_id', '=', order['id'])],
-                    'fields': [
-                        'id', 'product_id', 'product_uom_qty', 
-                        'height', 'width', 'count', 'price_unit',
-                        'price_subtotal', 'name',
-                    ]
-                }
-            )
-            
-            order_lines = order_lines_result.get('result', [])
-            
-            # Enhance order lines with product images
-            for line in order_lines:
-                if line.get('product_id'):
-                    product_id = line['product_id'][0]  # Get ID from [ID, Name] tuple
-                    
-                    # Get product image
-                    product_result = odoo.call(
-                        model='product.product',
-                        method='search_read',
-                        kwargs={
-                            'domain': [('id', '=', product_id)],
-                            'fields': ['image_1920', 'default_code'],
-                            'limit': 1
-                        }
-                    )
-                    
-                    if product_result.get('result'):
-                        product_data = product_result['result'][0]
-                        line['product_image'] = product_data.get('image_1920')
-                        line['product_code'] = product_data.get('default_code')
-                    else:
-                        line['product_image'] = False
-                        line['product_code'] = ''
-
-            order['order_lines'] = order_lines
 
             return Response(order, status=status.HTTP_200_OK)
 

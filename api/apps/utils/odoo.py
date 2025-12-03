@@ -66,7 +66,7 @@ class OdooRESTClient:
                 cache.set(self.cache_key, {
                     'session_id': self.session_id,
                     'uid': self.uid
-                }, timeout=3600)
+                }, timeout=10080)
                 
                 logger.info(f"Successfully logged in user: {self.username} (uid: {self.uid})")
             else:
@@ -132,8 +132,7 @@ class OdooRESTClient:
 
         try:
             response = self.session.post(url, json=payload, headers=headers, timeout=10)
-            
-            if response.status_code == 401 or "invalid session" in response.text.lower():
+            if response.status_code == 401:
                 logger.warning(f"Session expired for user: {self.username}, refreshing...")
                 self._refresh_session()
                 response = self.session.post(url, json=payload, headers=headers, timeout=10)

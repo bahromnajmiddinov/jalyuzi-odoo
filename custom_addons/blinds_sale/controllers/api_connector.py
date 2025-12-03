@@ -12,7 +12,7 @@ class DynamicOdooCall(http.Controller):
         method = data.get("method")
         args = data.get("args", [])
         kwargs = data.get("kwargs", {})
-        depth = data.get("depth", 1)
+        depth = data.get("depth", 2)
         
         # Pagination parameters
         limit = data.get("limit")
@@ -42,6 +42,12 @@ class DynamicOdooCall(http.Controller):
                 records_to_delete = model_obj.browse(record_ids)
                 result = records_to_delete.unlink()
                 total_count = len(record_ids)
+            elif method == 'write' and args:
+                record_ids = args[0]
+                values = args[1] if len(args) > 1 else {}
+                records_to_write = model_obj.browse(record_ids)
+                result = records_to_write.write(values)
+                total_count = len(record_ids)
             else:
                 method_to_call = getattr(model_obj, method)
                 result = method_to_call(*args, **kwargs)
@@ -54,10 +60,12 @@ class DynamicOdooCall(http.Controller):
                     total_count = model_obj.search_count(domain)
                 
                 # Apply profit percentage if needed
-                if model == 'product.template' and method in ['search_read', 'read'] and \
-                   employee and employee.profit_percentage:
+                if model == 'product.template' and method in ['search_read', 'read'] and employee:
+                    profit = employee.profit_percentage or 0
                     for record in result:
-                        record['list_price'] = record['list_price'] * (1 + employee.profit_percentage / 100)
+                        price = record.get('list_price') or 0
+                        record['list_price'] = price * (1 + profit / 100)
+
             
             # Serialize based on result type
             if method in ['search_read', 'read']:
@@ -70,7 +78,7 @@ class DynamicOdooCall(http.Controller):
 
             # Return with pagination metadata
             response = {"result": result}
-            if total_count is not None:
+            if total_count is not None and total_count > 1:
                 response["total_count"] = total_count
                 response["limit"] = limit
                 response["offset"] = offset

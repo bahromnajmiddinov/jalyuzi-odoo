@@ -2,7 +2,6 @@
 _build/
 
 # dotfiles
-.*
 !.gitignore
 !.github
 !.mailmap
@@ -55,7 +54,7 @@ package.json
 /venv/
 /.venv/
 /env/
-/.env/
+.env
 /.idea/
 
 *.sqlite3

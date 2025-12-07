@@ -191,7 +191,7 @@ def get_odoo_client_with_cached_session(username, db="jdb", url="http://localhos
     Get Odoo client instance using cached session for specific user.
     """
     try:
-        session_cache_key = f"odoo_session_{getattr(settings, 'ODOO_DB', 'jdb')}_{username}"
+        session_cache_key = f"odoo_session_{settings.ODOO_DB}_{username}"
         cached_session = cache.get(session_cache_key)
         
         if not cached_session:
@@ -204,8 +204,8 @@ def get_odoo_client_with_cached_session(username, db="jdb", url="http://localhos
         odoo = get_odoo_client(
             username=username,
             password="",
-            db=getattr(settings, 'ODOO_DB', 'jdb'),
-            url=getattr(settings, 'ODOO_URL', 'http://localhost:8069')
+            db=settings.ODOO_DB,
+            url=settings.ODOO_URL
         )
         return odoo
         

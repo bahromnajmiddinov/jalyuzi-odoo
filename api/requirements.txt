@@ -10,3 +10,5 @@ uvicorn==0.34.2
 websockets==15.0.1
 channels_redis==4.2.1
 django-celery-results==2.6.0
+gunicorn==23.0.0
+python-decouple==3.8

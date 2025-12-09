@@ -2,7 +2,10 @@ import logging
 from django.contrib.auth import authenticate
 from django.core.cache import cache
 from django.db import transaction
+from django.conf import settings
 
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import GenericAPIView
@@ -16,7 +19,8 @@ from .models import CustomUser
 from .serializers import (
     DeliveryPersonLoginSerializer, 
     TokenResponseSerializer, 
-    DeliveryPersonSerializer
+    DeliveryPersonSerializer,
+    TokenRefreshSerializer,
 )
 from apps.utils.odoo import get_odoo_client
 
@@ -69,6 +73,110 @@ def test_websocket(request):
             {"error": f"Failed to send WebSocket message: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+class TokenRefreshAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = TokenRefreshSerializer
+
+    @extend_schema(
+        request=TokenRefreshSerializer,
+        responses={
+            200: OpenApiResponse(
+                description='Token refreshed successfully',
+                response=TokenResponseSerializer
+            ),
+            400: OpenApiResponse(description='Invalid input'),
+            401: OpenApiResponse(description='Invalid or expired refresh token'),
+            500: OpenApiResponse(description='Server error or Odoo connection error')
+        },
+        tags=['Authentication'],
+        summary='Refresh access token and update Odoo session cache',
+    )
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        
+        try:
+            serializer.is_valid(raise_exception=True)
+            refresh_token = serializer.validated_data.get('refresh')
+            
+            # Validate and decode the refresh token
+            token = RefreshToken(refresh_token)
+            user_id = token.get('user_id')
+            
+            # Get user from database
+            from .models import CustomUser
+            try:
+                user = CustomUser.objects.get(id=user_id)
+            except CustomUser.DoesNotExist:
+                logger.error(f"User not found for id: {user_id}")
+                return Response(
+                    {'detail': 'User not found'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            # Generate new access token
+            new_access_token = str(token.access_token)
+            
+            # Update Odoo session cache if user has Odoo credentials
+            if hasattr(user, 'odoo_user_id') and user.odoo_user_id:
+                try:
+                    # Check if Odoo session exists in cache
+                    session_cache_key = f"odoo_session_{getattr(settings, 'ODOO_DB', 'jdb')}_{user.username}"
+                    cached_session = cache.get(session_cache_key)
+                    
+                    if cached_session:
+                        # Refresh the Odoo session cache TTL (extend expiration)
+                        # Default to 30 minutes (1800 seconds)
+                        cache.set(session_cache_key, cached_session, 1800)
+                        logger.info(f"Refreshed Odoo session cache for user {user.username}")
+                        
+                        # Also refresh user data cache if it exists
+                        user_cache_key = f"delivery_person_{user.odoo_user_id}"
+                        if cache.get(user_cache_key):
+                            # Optionally, you can re-fetch fresh data from Odoo here
+                            # For now, just extend the cache TTL
+                            cache.touch(user_cache_key, 300)  # Extend by 5 minutes
+                            logger.info(f"Extended user data cache for user {user.odoo_user_id}")
+                    else:
+                        logger.warning(f"No Odoo session cache found for user {user.username}")
+                        # Session expired - user needs to login again
+                        return Response(
+                            {
+                                'access_token': new_access_token,
+                                'refresh_token': str(token),
+                                'warning': 'Odoo session expired. Some features may require re-login.'
+                            },
+                            status=status.HTTP_200_OK
+                        )
+                        
+                except Exception as e:
+                    logger.error(f"Error refreshing Odoo cache for user {user.username}: {str(e)}")
+                    # Continue anyway - JWT refresh succeeded
+            
+            logger.info(f"Token refreshed successfully for user: {user.username}")
+            
+            return Response({
+                'access_token': new_access_token,
+                'refresh_token': str(token),
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except TokenError as e:
+            logger.warning(f"Invalid refresh token: {str(e)}")
+            return Response(
+                {'detail': 'Invalid or expired refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        except Exception as e:
+            logger.error(f"Token refresh error: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to refresh token'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class DeliveryPersonLoginAPIView(GenericAPIView):

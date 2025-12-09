@@ -1,17 +1,33 @@
 from django.urls import path
-
 from .views import (
-    PaymentJournalListAPIView, PaymentMethodListAPIView,
-    PaymentProofAPIView, PaymentProofDetailAPIView
+    OrderInvoiceListAPIView,
+    InvoiceDetailAPIView,
+    InvoicePaymentListAPIView,
+    PaymentDetailAPIView,
 )
 
-
 urlpatterns = [
-    # path('<int:order_id>/', InvoiceListAPIView.as_view(), name='invoices_list'),
-    # path('invoice/<int:id>/', InvoiceRetrieveAPIView.as_view(), name='invoice_detail'),
-    # path('payment/<int:invoice_id>/', PaymentRegisterAPIView.as_view(), name='payment_register'),
-    path('journals/', PaymentJournalListAPIView.as_view(), name='payment_journals'),
-    path('payment-methods/', PaymentMethodListAPIView.as_view(), name='payment_methods'),
-    path('orders/<int:order_id>/payments/', PaymentProofAPIView.as_view(), name='payment_proof'),
-    path('payments/<int:id>/', PaymentProofDetailAPIView.as_view(), name='payment_proof_detail'),
+    # Invoice endpoints
+    path(
+        'orders/<int:order_id>/invoices/',
+        OrderInvoiceListAPIView.as_view(),
+        name='order-invoices'
+    ),
+    path(
+        '<int:invoice_id>/',
+        InvoiceDetailAPIView.as_view(),
+        name='invoice-detail'
+    ),
+    
+    # Payment endpoints
+    path(
+        '<int:invoice_id>/payments/',
+        InvoicePaymentListAPIView.as_view(),
+        name='invoice-payments'
+    ),
+    path(
+        'payments/<int:payment_id>/',
+        PaymentDetailAPIView.as_view(),
+        name='payment-detail'
+    ),
 ]

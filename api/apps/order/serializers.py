@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from apps.invoice.serializers import PaymentProofSerializer
-
 
 class OrderLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
@@ -25,4 +23,3 @@ class SaleOrderSerializer(serializers.Serializer):
     access_url = serializers.CharField(read_only=True)
     access_token = serializers.CharField(read_only=True)
     note = serializers.CharField(required=False, allow_blank=True)
-    payment_proof_ids = PaymentProofSerializer(many=True, read_only=True)

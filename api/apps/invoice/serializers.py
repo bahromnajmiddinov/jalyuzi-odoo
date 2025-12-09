@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from datetime import date
 from datetime import datetime
+from django.utils import timezone
 
 
 class InvoiceSerializer(serializers.Serializer):
@@ -150,7 +151,7 @@ class PaymentProofCreateSerializer(serializers.Serializer):
 
     def validate_payment_date(self, value):
         """Validate that payment date is not in the future"""
-        if value > datetime.now():
+        if value > timezone.now():
             raise serializers.ValidationError("Payment date cannot be in the future")
         return value
 
@@ -219,7 +220,7 @@ class PaymentProofUpdateSerializer(serializers.Serializer):
 
     def validate_payment_date(self, value):
         """Validate that payment date is not in the future"""
-        if value > datetime.now():
+        if value > timezone.now():
             raise serializers.ValidationError("Payment date cannot be in the future")
         return value
 

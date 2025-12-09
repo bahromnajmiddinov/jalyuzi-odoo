@@ -133,7 +133,8 @@ class CustomerListAPIView(GenericAPIView):
                     'order': 'create_date desc',
                 },
                 limit=page_size,
-                offset=offset
+                offset=offset,
+                relation_fields={'country_id': ['id', 'name'], 'state_id': ['id', 'name']},
             )
 
             # Extract pagination metadata
@@ -187,30 +188,8 @@ class CustomerListAPIView(GenericAPIView):
             if isinstance(odoo, Response):
                 return odoo
 
-            # Check if customer with same phone already exists
-            if validated_data.get('phone'):
-                existing_customer_result = odoo.call(
-                    model='res.partner',
-                    method='search_read',
-                    kwargs={
-                        'domain': [
-                            ('phone', '=', validated_data['phone']),
-                        ],
-                        'fields': ['id', 'name'],
-                        'limit': 1
-                    }
-                )
-                
-                if existing_customer_result.get('result'):
-                    existing_customer = existing_customer_result['result'][0]
-                    return Response({
-                        'error': f'Customer with phone {validated_data["phone"]} already exists',
-                        'existing_customer_id': existing_customer['id'],
-                        'existing_customer_name': existing_customer['name']
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
             # Create customer in Odoo
-            customer_id = odoo.call(
+            customer_result = odoo.call(
                 model='res.partner',
                 method='create',
                 args=[{
@@ -223,18 +202,7 @@ class CustomerListAPIView(GenericAPIView):
                     'email': validated_data.get('email', False),
                     'mobile': validated_data.get('mobile', False),
                     'type': 'contact',  # Set as contact type
-                }]
-            )
-            
-            # Get created customer details
-            customer_result = odoo.call(
-                model='res.partner',
-                method='search_read',
-                kwargs={
-                    'domain': [('id', '=', customer_id)],
-                    'fields': ['id', 'name', 'phone', 'email', 'city'],
-                    'limit': 1
-                }
+                }],
             )
             
             customer = customer_result['result'][0] if customer_result.get('result') else {'id': customer_id}
@@ -299,7 +267,8 @@ class CustomerRetrieveAPIView(GenericAPIView):
                         'write_date', 'vat', 'company_type',
                     ],
                     'limit': 1
-                }
+                },
+                relation_fields={'country_id': ['id', 'name'], 'state_id': ['id', 'name']},
             )
             
             customers = result.get('result', [])
@@ -362,29 +331,6 @@ class CustomerRetrieveAPIView(GenericAPIView):
             
             if not check_result.get('result'):
                 raise NotFound(detail='Customer not found!')
-            
-            # Check if phone number is being changed and already exists
-            if validated_data.get('phone'):
-                phone_check_result = odoo.call(
-                    model='res.partner',
-                    method='search_read',
-                    kwargs={
-                        'domain': [
-                            ('phone', '=', validated_data['phone']),
-                            ('id', '!=', int(id)),
-                        ],
-                        'fields': ['id', 'name'],
-                        'limit': 1
-                    }
-                )
-                
-                if phone_check_result.get('result'):
-                    existing_customer = phone_check_result['result'][0]
-                    return Response({
-                        'error': f'Phone number {validated_data["phone"]} already belongs to another customer',
-                        'existing_customer_id': existing_customer['id'],
-                        'existing_customer_name': existing_customer['name']
-                    }, status=status.HTTP_400_BAD_REQUEST)
 
             # Prepare update data
             update_data = {}

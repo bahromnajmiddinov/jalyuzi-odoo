@@ -395,10 +395,14 @@ class DeliveryPersonAPIView(GenericAPIView):
                 kwargs={
                     'fields': [
                         'name', 'login', 'email', 'mobile', 'phone',
-                        'partner_id', 'image_1920'
+                        'partner_id', 'image_1920_url', 'total_sales',
+                        'total_orders', 'total_payments', 'debt_amount',
+                        'debt_limit', 'profit_percentage', 'sale_debt', 'sale_debt_limit',
+                        'pending_orders', 'delivered_orders', 'cancelled_orders'
                     ],
                     'limit': 1
-                }
+                },
+                relation_fields={'partner_id': ['delivery_person_sale_debt', 'delivery_person_sale_debt_limit', 'delivery_person_sales_amount']}
             )
 
             if not odoo_user:
@@ -408,7 +412,7 @@ class DeliveryPersonAPIView(GenericAPIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            odoo_user = odoo_user[0]
+            odoo_user = odoo_user['result'][0]
             
             # Get partner details if needed (for additional fields)
             partner_id = odoo_user.get('partner_id') if odoo_user.get('partner_id') else None
@@ -422,18 +426,6 @@ class DeliveryPersonAPIView(GenericAPIView):
             
             # If you have custom fields on res.partner for delivery stats, fetch them
             if partner_id:
-                # partner_data = odoo.call(
-                #     'res.partner',
-                #     'read',
-                #     args=[[partner_id]],
-                #     kwargs={
-                #         'fields': [
-                #             'delivery_person_sale_debt',
-                #             'delivery_person_sale_debt_limit',
-                #             'delivery_person_sales_amount'
-                #         ]
-                #     }
-                # )
                 partner_data = {
                     'delivery_person_sale_debt': partner_id.get('delivery_person_sale_debt', 0.0),
                     'delivery_person_sale_debt_limit': partner_id.get('delivery_person_sale_debt_limit', 0.0),
@@ -450,7 +442,7 @@ class DeliveryPersonAPIView(GenericAPIView):
                 ('state', '!=', 'cancel')
             ]
             
-            fields = ['name', 'amount_total', 'state', 'partner_id', 'date_order']
+            fields = ['name', 'amount_total', 'state', 'date_order', 'paid_amount', 'partner_id']
             orders = odoo.call(
                 'sale.order', 
                 'search_read', 
@@ -458,16 +450,17 @@ class DeliveryPersonAPIView(GenericAPIView):
                 kwargs={
                     'fields': fields,
                     'order': 'date_order desc',
-                    'limit': 100
-                }
+                    'limit': 5
+                },
+                relation_fields={'partner_id': ['name', 'id']}
             )
-
+            print(orders)
             # Calculate statistics
-            total_sales = sum(o.get('amount_total', 0) for o in orders)
-            total_orders = len(orders)
-            pending_orders = len([o for o in orders if o['state'] in ['draft', 'sent', 'sale']])
-            delivered_orders = len([o for o in orders if o['state'] == 'done'])
-            cancelled_orders = len([o for o in orders if o['state'] == 'cancel'])
+            total_sales = odoo_user.get('total_sales', 0.0)
+            total_orders = odoo_user.get('total_orders', 0)
+            pending_orders = odoo_user.get('pending_orders', 0)
+            delivered_orders = odoo_user.get('delivered_orders', 0)
+            cancelled_orders = odoo_user.get('cancelled_orders', 0)
 
             stats = {
                 "total_sales": total_sales,
@@ -475,7 +468,7 @@ class DeliveryPersonAPIView(GenericAPIView):
                 "pending_orders": pending_orders,
                 "delivered_orders": delivered_orders,
                 "cancelled_orders": cancelled_orders,
-                "recent_orders": orders[:5]
+                "recent_orders": orders['result'] if orders else []
             }
 
             response_data = {

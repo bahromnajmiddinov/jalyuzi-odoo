@@ -155,6 +155,22 @@ class PaymentProofCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Payment date cannot be in the future")
         return value
 
+    def validate_proof_image(self, value):
+        """Validate image file"""
+        if value:
+            # Check file size (max 5MB)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size must not exceed 5MB")
+            
+            # Check file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError(
+                    f"Invalid image type. Allowed types: {', '.join(allowed_types)}"
+                )
+        
+        return value
+
 
 class PaymentProofUpdateSerializer(serializers.Serializer):
     """Serializer for updating payment proof"""
@@ -206,4 +222,20 @@ class PaymentProofUpdateSerializer(serializers.Serializer):
         """Validate that payment date is not in the future"""
         if value > timezone.now():
             raise serializers.ValidationError("Payment date cannot be in the future")
+        return value
+
+    def validate_proof_image(self, value):
+        """Validate image file"""
+        if value:
+            # Check file size (max 5MB)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size must not exceed 5MB")
+            
+            # Check file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError(
+                    f"Invalid image type. Allowed types: {', '.join(allowed_types)}"
+                )
+        
         return value

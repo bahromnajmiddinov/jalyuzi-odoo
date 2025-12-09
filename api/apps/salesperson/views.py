@@ -438,7 +438,7 @@ class DeliveryPersonAPIView(GenericAPIView):
             # Fetch sales statistics
             # Assuming sale.order has a field linking to the delivery user
             domain = [
-                ('user_id', '=', user.odoo_user_id),
+                ('user_id.id', '=', user.odoo_user_id),
                 ('state', '!=', 'cancel')
             ]
             

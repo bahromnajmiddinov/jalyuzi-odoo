@@ -236,12 +236,12 @@ class OrderListAPIView(GenericAPIView):
                     'limit': 1
                 }
             )
-            
+            print(user_info_result)
             if user_info_result.get('result'):
                 user_info = user_info_result['result'][0]
                 current_debt = user_info.get('sale_debt', 0)
                 debt_limit = user_info.get('sale_debt_limit', 0)
-                
+                print(current_debt, debt_limit, total_amount)
                 if current_debt + total_amount > debt_limit:
                     return Response(
                         {'error': 'Total order amount exceeds the allowed debt limit for this user.'},

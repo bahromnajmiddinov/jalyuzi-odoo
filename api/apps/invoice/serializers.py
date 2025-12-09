@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from datetime import date
+from datetime import datetime
 
 
 class InvoiceSerializer(serializers.Serializer):
@@ -78,3 +79,162 @@ class PaymentMethodLineSerializer(serializers.Serializer):
     code = serializers.CharField(read_only=True)
     payment_type = serializers.CharField(read_only=True)
     
+
+class PaymentProofSerializer(serializers.Serializer):
+    """Serializer for payment proof display"""
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    payment_date = serializers.DateTimeField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0.01)
+    currency_id = serializers.DictField(read_only=True)
+    sale_order_id = serializers.DictField(read_only=True)
+    payment_method_id = serializers.DictField(read_only=True)
+    journal_id = serializers.DictField(read_only=True, allow_null=True)
+    proof_image = serializers.CharField(read_only=True, allow_null=True)
+    state = serializers.ChoiceField(
+        choices=['draft', 'submitted', 'verified', 'rejected', 'processed'],
+        read_only=True
+    )
+    notes = serializers.CharField(allow_blank=True, allow_null=True)
+    invoice_id = serializers.DictField(read_only=True, allow_null=True)
+    partner_id = serializers.DictField(read_only=True, allow_null=True)
+    create_date = serializers.DateTimeField(read_only=True, required=False)
+    write_date = serializers.DateTimeField(read_only=True, required=False)
+
+
+class PaymentProofCreateSerializer(serializers.Serializer):
+    """Serializer for creating payment proof"""
+    payment_date = serializers.DateTimeField(
+        required=True,
+        help_text="Date and time of payment"
+    )
+    amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=0.01,
+        required=True,
+        help_text="Payment amount (must be positive)"
+    )
+    payment_method_id = serializers.IntegerField(
+        required=True,
+        help_text="ID of the payment method used"
+    )
+    journal_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID of the payment journal (bank or cash)"
+    )
+    invoice_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID of the linked invoice (optional)"
+    )
+    proof_image = serializers.ImageField(
+        required=False,
+        allow_null=True,
+        help_text="Image file of payment proof (receipt, screenshot, etc.)"
+    )
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=5000,
+        help_text="Additional notes or comments"
+    )
+
+    def validate_amount(self, value):
+        """Validate that amount is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Payment amount must be greater than zero")
+        return value
+
+    def validate_payment_date(self, value):
+        """Validate that payment date is not in the future"""
+        if value > datetime.now():
+            raise serializers.ValidationError("Payment date cannot be in the future")
+        return value
+
+    def validate_proof_image(self, value):
+        """Validate image file"""
+        if value:
+            # Check file size (max 5MB)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size must not exceed 5MB")
+            
+            # Check file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError(
+                    f"Invalid image type. Allowed types: {', '.join(allowed_types)}"
+                )
+        
+        return value
+
+
+class PaymentProofUpdateSerializer(serializers.Serializer):
+    """Serializer for updating payment proof"""
+    payment_date = serializers.DateTimeField(
+        required=False,
+        help_text="Date and time of payment"
+    )
+    amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=0.01,
+        required=False,
+        help_text="Payment amount (must be positive)"
+    )
+    payment_method_id = serializers.IntegerField(
+        required=False,
+        help_text="ID of the payment method used"
+    )
+    journal_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID of the payment journal (bank or cash)"
+    )
+    invoice_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="ID of the linked invoice (optional)"
+    )
+    proof_image = serializers.ImageField(
+        required=False,
+        allow_null=True,
+        help_text="Image file of payment proof (receipt, screenshot, etc.)"
+    )
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=5000,
+        help_text="Additional notes or comments"
+    )
+
+    def validate_amount(self, value):
+        """Validate that amount is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Payment amount must be greater than zero")
+        return value
+
+    def validate_payment_date(self, value):
+        """Validate that payment date is not in the future"""
+        if value > datetime.now():
+            raise serializers.ValidationError("Payment date cannot be in the future")
+        return value
+
+    def validate_proof_image(self, value):
+        """Validate image file"""
+        if value:
+            # Check file size (max 5MB)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size must not exceed 5MB")
+            
+            # Check file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError(
+                    f"Invalid image type. Allowed types: {', '.join(allowed_types)}"
+                )
+        
+        return value

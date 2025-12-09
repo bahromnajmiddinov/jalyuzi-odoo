@@ -4,6 +4,11 @@ from .views import (
     InvoiceDetailAPIView,
     InvoicePaymentListAPIView,
     PaymentDetailAPIView,
+    OrderPaymentProofListAPIView,
+    PaymentProofDetailAPIView,
+    PaymentProofSubmitAPIView,
+    PaymentJournalAPIView,
+    PaymentMethodLineAPIView,
 )
 
 urlpatterns = [
@@ -29,5 +34,34 @@ urlpatterns = [
         'payments/<int:payment_id>/',
         PaymentDetailAPIView.as_view(),
         name='payment-detail'
+    ),
+    
+    # Payment Proof endpoints
+    path(
+        'orders/<int:order_id>/payment-proofs/',
+        OrderPaymentProofListAPIView.as_view(),
+        name='order-payment-proof-list'
+    ),
+    path(
+        'payment-proofs/<int:proof_id>/',
+        PaymentProofDetailAPIView.as_view(),
+        name='payment-proof-detail'
+    ),
+    path(
+        'payment-proofs/<int:proof_id>/submit/',
+        PaymentProofSubmitAPIView.as_view(),
+        name='payment-proof-submit'
+    ),
+    
+    # Additional endpoints
+    path(
+        'payment-journals/',
+        PaymentJournalAPIView.as_view(),
+        name='payment-journal-list'
+    ),
+    path(
+        'payment-method-lines/',
+        PaymentMethodLineAPIView.as_view(),
+        name='payment-method-line-list'
     ),
 ]

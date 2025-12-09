@@ -1324,6 +1324,22 @@ class PaymentJournalAPIView(GenericAPIView):
             
             if isinstance(odoo, Response):
                 return odoo
+            
+            # Get user company
+            company_result = odoo.call(
+                model='res.users',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', request.user.odoo_user_id)],
+                    'fields': ['company_id'],
+                    'limit': 1,
+                },
+                relation_fields={
+                    'company_id': ['id', 'name'],
+                }
+            )
+            
+            company = company_result['result'][0].get('company_id') if company_result.get('result') else None
 
             # Get payment journals
             journal_result = odoo.call(
@@ -1332,7 +1348,7 @@ class PaymentJournalAPIView(GenericAPIView):
                 kwargs={
                     'domain': [
                         ('type', 'in', ['bank', 'cash']),
-                        ('company_id', '=', user.odoo_company_id)
+                        ('company_id', '=', company['id'])
                     ],
                     'fields': ['id', 'name', 'type', 'code'],
                 }
@@ -1368,6 +1384,21 @@ class PaymentMethodLineAPIView(GenericAPIView):
             
             if isinstance(odoo, Response):
                 return odoo
+            
+            # Get user company
+            company_result = odoo.call(
+                model='res.users',
+                method='search_read',
+                kwargs={
+                    'domain': [('id', '=', request.user.odoo_user_id)],
+                    'fields': ['company_id'],
+                    'limit': 1,
+                },
+                relation_fields={
+                    'company_id': ['id', 'name'],
+                }
+            )
+            company = company_result['result'][0].get('company_id') if company_result.get('result') else None
 
             # Get payment method lines
             method_line_result = odoo.call(
@@ -1375,9 +1406,12 @@ class PaymentMethodLineAPIView(GenericAPIView):
                 method='search_read',
                 kwargs={
                     'domain': [
-                        ('company_id', '=', user.odoo_company_id)
+                        ('company_id', '=', company['id'])
                     ],
                     'fields': ['id', 'name', 'code', 'payment_method_id'],
+                },
+                relation_fields={
+                    'payment_method_id': ['id', 'name', 'payment_type'],
                 }
             )
             

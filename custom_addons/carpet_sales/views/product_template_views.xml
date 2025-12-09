@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_template_form_carpet" model="ir.ui.view">
+        <field name="name">product.template.form.carpet</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+
+            <!-- Carpet Info -->
+            <xpath expr="//group[@name='group_general']" position="after">
+                <group string="Carpet Information" name="carpet_info">
+                    <field name="is_carpet"/>
+                    <field name="carpet_width"
+                           invisible="is_carpet == False"
+                           required="is_carpet == True"/>
+
+                    <field name="carpet_height"
+                           invisible="is_carpet == False"
+                           required="is_carpet == True"/>
+
+                    <field name="carpet_area"
+                           invisible="is_carpet == False"/>
+                </group>
+            </xpath>
+
+            <!-- Hide original label -->
+            <xpath expr="//label[@for='list_price']" position="attributes">
+                <attribute name="modifiers">{'invisible': true}</attribute>
+            </xpath>
+
+            <!-- Add new custom label (Odoo 17 syntax) -->
+            <xpath expr="//label[@for='list_price']" position="after">
+                <label string="Price per m²" for="list_price"
+                       invisible="is_carpet == False"/>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

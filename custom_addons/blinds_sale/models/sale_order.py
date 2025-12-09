@@ -10,8 +10,13 @@ class SaleOrder(models.Model):
         help='List of payment proofs associated with this sale order.'
     )
     
-    def action_create_invoice(self):
-        self.ensure_one()
+    @api.model
+    def action_create_invoice(self, order_id):
+        if order_id:
+            order = self.browse(order_id)
+            if not order.exists():
+                raise UserError(_("Sale order not found"))
+            self = order
         self._create_invoices()
         return self.invoice_ids.ids
     
@@ -22,7 +27,7 @@ class SaleOrder(models.Model):
             vals_list['access_token'] = str(uuid.uuid4())
         
         return super().create(vals_list)
-
+    
 
 class PaymentProof(models.Model):
     _name = 'payment.proof'

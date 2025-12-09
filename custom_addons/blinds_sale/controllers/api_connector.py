@@ -13,6 +13,7 @@ class DynamicOdooCall(http.Controller):
         args = data.get("args", [])
         kwargs = data.get("kwargs", {})
         depth = data.get("depth", 2)
+        sudo = data.get("sudo", False)
         
         # Pagination parameters
         limit = data.get("limit")
@@ -29,66 +30,83 @@ class DynamicOdooCall(http.Controller):
         if not model or not method:
             return {"error": "Model and method are required"}
         
-        try:
-            model_obj = request.env[model]
+        # try:
+        model_obj = request.env[model]
+        
+        if sudo:
+            model_obj = model_obj.sudo()
+        
+        # Apply pagination to kwargs if provided
+        if limit is not None and method in ['search_read', 'search']:
+            kwargs['limit'] = limit
+            kwargs['offset'] = offset
+        
+        if method == 'unlink' and args:
+            record_ids = args[0]
+            records_to_delete = model_obj.browse(record_ids)
+            result = records_to_delete.unlink()
+            total_count = len(record_ids)
+        elif method == 'write' and args:
+            record_ids = args[0]
+            values = args[1] if len(args) > 1 else {}
+            records_to_write = model_obj.browse(record_ids)
+            result = records_to_write.write(values)
+            total_count = len(record_ids)
+        else:
+            method_to_call = getattr(model_obj, method)
+            result = method_to_call(*args, **kwargs)
             
-            # Apply pagination to kwargs if provided
-            if limit is not None and method in ['search_read', 'search']:
-                kwargs['limit'] = limit
-                kwargs['offset'] = offset
+            # Get total count for pagination
+            total_count = None
+            if method in ['search_read', 'search'] and limit is not None:
+                # Get domain from args or kwargs
+                domain = args[0] if args else kwargs.get('domain', [])
+                total_count = model_obj.search_count(domain)
             
-            if method == 'unlink' and args:
-                record_ids = args[0]
-                records_to_delete = model_obj.browse(record_ids)
-                result = records_to_delete.unlink()
-                total_count = len(record_ids)
-            elif method == 'write' and args:
-                record_ids = args[0]
-                values = args[1] if len(args) > 1 else {}
-                records_to_write = model_obj.browse(record_ids)
-                result = records_to_write.write(values)
-                total_count = len(record_ids)
-            else:
-                method_to_call = getattr(model_obj, method)
-                result = method_to_call(*args, **kwargs)
-                
-                # Get total count for pagination
-                total_count = None
-                if method in ['search_read', 'search'] and limit is not None:
-                    # Get domain from args or kwargs
-                    domain = args[0] if args else kwargs.get('domain', [])
-                    total_count = model_obj.search_count(domain)
-                
-                # Apply profit percentage if needed
-                if model == 'product.template' and method in ['search_read', 'read'] and employee:
-                    profit = employee.profit_percentage or 0
-                    for record in result:
-                        price = record.get('list_price') or 0
-                        record['list_price'] = price * (1 + profit / 100)
+            # Apply profit percentage if needed
+            if model == 'product.template' and method in ['search_read', 'read'] and employee:
+                profit = employee.profit_percentage or 0
+                for record in result:
+                    price = record.get('list_price') or 0
+                    record['list_price'] = price * (1 + profit / 100)
 
-            
-            # Serialize based on result type
-            if method in ['search_read', 'read']:
-                if isinstance(result, list):
-                    result = [self.process_dict_result(record, model_obj, depth=depth, relation_fields=relation_fields) for record in result]
-            elif hasattr(result, "ids"):
-                result = [self.serialize_record(rec, depth=depth, relation_fields=relation_fields) for rec in result]
-            elif hasattr(result, "id"):
-                result = self.serialize_record(result, depth=depth, relation_fields=relation_fields)
+        
+        # Serialize based on result type
+        if method in ['search_read', 'read']:
+            if isinstance(result, list):
+                result = [self.process_dict_result(record, model_obj, depth=depth, relation_fields=relation_fields) for record in result]
+        elif hasattr(result, "ids") and method not in ['create']:
+            result = [self.serialize_record(rec, depth=depth, relation_fields=relation_fields) for rec in result]
+        elif hasattr(result, "id") and method not in ['create']:
+            result = self.serialize_record(result, depth=depth, relation_fields=relation_fields)
+        
+        # Return with pagination metadata
+        response = {"result": result}
+        
+        if method in ['create']:
+            if model == 'res.partner':
+                # For created partners, only get ID, name, email
+                created_record = result
+                response["result"] = [
+                    {
+                        "id": created_record.id,
+                        "name": created_record.name,
+                        "email": created_record.email,
+                        "phone": created_record.phone,
+                    }
+                ]
+        
+        if total_count is not None and total_count > 1:
+            response["total_count"] = total_count
+            response["limit"] = limit
+            response["offset"] = offset
+            response["has_more"] = (offset + limit) < total_count
+        
+        return response
 
-            # Return with pagination metadata
-            response = {"result": result}
-            if total_count is not None and total_count > 1:
-                response["total_count"] = total_count
-                response["limit"] = limit
-                response["offset"] = offset
-                response["has_more"] = (offset + limit) < total_count
-            
-            return response
-
-        except Exception as e:
-            print(f"Error calling {model}.{method}: {e}")
-            return {"error": str(e)}
+        # except Exception as e:
+        #     print(f"Error calling {model}.{method}: {e}")
+        #     return {"error": str(e)}
     
     def process_dict_result(self, data_dict, model_obj, depth=1, relation_fields=None):
         """
@@ -235,7 +253,20 @@ class DynamicOdooCall(http.Controller):
 
             # Binary field
             elif field.type == "binary":
-                data[field_name] = value.decode() if value else ""
+                import base64
+                if value:
+                    if isinstance(value, bytes):
+                        data[field_name] = base64.b64encode(value).decode('utf-8')
+                    elif isinstance(value, str):
+                        data[field_name] = value
+                    else:
+                        # Handle frozendict or other types
+                        try:
+                            data[field_name] = str(value)
+                        except:
+                            data[field_name] = None
+                else:
+                    data[field_name] = None
 
         return data
     

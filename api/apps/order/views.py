@@ -449,7 +449,7 @@ class OrderDetailAPIView(GenericAPIView):
                 model='sale.order',
                 method='search_read',
                 kwargs={
-                    'domain': [('id', '=', int(pk)), ('user_id', '=', request.user.odoo_user_id)],
+                    'domain': [('id', '=', int(pk)), ('user_id.id', '=', request.user.odoo_user_id)],
                     'fields': ['id', 'state'],
                     'limit': 1
                 }

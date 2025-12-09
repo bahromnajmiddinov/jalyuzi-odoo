@@ -277,7 +277,7 @@ class ProductCategoryListAPIView(GenericAPIView):
                 method='search_read',
                 kwargs={
                     'fields': [
-                        'id', 'name', 'product_count', 'image_1920'
+                        'id', 'name', 'product_count', 'image_url_1920'
                     ]
                 },
                 limit=page_size,

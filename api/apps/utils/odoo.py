@@ -86,7 +86,7 @@ class OdooRESTClient:
         cache.delete(self.cache_key)
         self._login()
 
-    def call(self, model, method, args=None, kwargs=None, limit=None, offset=None, relation_fields=None):
+    def call(self, model, method, args=None, kwargs=None, limit=None, offset=None, relation_fields=None, sudo=False):
         """
         Call Odoo model method with automatic session refresh and pagination support.
         
@@ -113,8 +113,7 @@ class OdooRESTClient:
             "model": model,
             "method": method,
             "args": args or [],
-            "kwargs": kwargs or {}
-        }
+            "kwargs": kwargs or {}        }
         
         # Add pagination parameters
         if limit is not None:
@@ -124,6 +123,9 @@ class OdooRESTClient:
         # Add relation field filtering
         if relation_fields is not None:
             payload["relation_fields"] = relation_fields
+        
+        if sudo:
+            payload["sudo"] = True
         
         headers = {
             "Content-Type": "application/json",
@@ -139,7 +141,6 @@ class OdooRESTClient:
             
             response.raise_for_status()
             data = response.json()
-            
             if 'error' in data.get('result', {}):
                 error_msg = data['result']['error']
                 logger.error(f"Odoo error for user {self.username}: {error_msg}")

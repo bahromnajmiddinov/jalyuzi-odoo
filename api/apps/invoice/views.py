@@ -71,10 +71,12 @@ class OrderInvoiceListAPIView(GenericAPIView):
                         ('user_id.id', '=', request.user.odoo_user_id)
                     ],
                     'fields': ['id', 'name', 'invoice_ids'],
-                    'limit': 1
-                }
+                    'limit': 1,
+                },
+                relation_fields={
+                    'invoice_ids': ['id'],
+                    }
             )
-            
             if not order_result.get('result'):
                 return Response(
                     {"error": "Order not found or access denied"},
@@ -83,6 +85,9 @@ class OrderInvoiceListAPIView(GenericAPIView):
             
             order = order_result['result'][0]
             invoice_ids = order.get('invoice_ids', [])
+            
+            if isinstance(invoice_ids[0], dict):
+                invoice_ids = list(order['invoice_ids'][0].values())
             
             if not invoice_ids:
                 return Response({
@@ -105,7 +110,7 @@ class OrderInvoiceListAPIView(GenericAPIView):
             domain = [('id', 'in', invoice_ids)]
             if invoice_state:
                 domain.append(('state', '=', invoice_state))
-
+            
             # Get invoices with pagination
             result = odoo.call(
                 model='account.move',
@@ -120,7 +125,11 @@ class OrderInvoiceListAPIView(GenericAPIView):
                     ],
                 },
                 limit=page_size,
-                offset=offset
+                offset=offset,
+                relation_fields={
+                    'currency_id': ['id', 'name', 'symbol'],
+                    'partner_id': ['id', 'name', 'email'],
+                }
             )
 
             invoices = result.get('result', [])
@@ -181,7 +190,10 @@ class OrderInvoiceListAPIView(GenericAPIView):
                     ],
                     'fields': ['id', 'name', 'state', 'invoice_status', 'invoice_ids'],
                     'limit': 1
-                }
+                },
+                relation_fields={
+                    'invoice_ids': ['id'],
+                    }
             )
             
             if not order_result.get('result'):
@@ -205,11 +217,10 @@ class OrderInvoiceListAPIView(GenericAPIView):
                     {'error': 'Order must be confirmed before creating invoice'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            # Create invoice using Odoo's standard method
+            
             result = odoo.call(
                 model='sale.order',
-                method='_create_invoices',
+                method='action_create_invoice',
                 args=[[int(order_id)]]
             )
             
@@ -220,6 +231,7 @@ class OrderInvoiceListAPIView(GenericAPIView):
                 )
             
             # result is a list of invoice IDs
+            result = result.get('result', [])
             invoice_ids = result if isinstance(result, list) else [result]
             
             # Get created invoice details
@@ -274,7 +286,7 @@ class InvoiceDetailAPIView(GenericAPIView):
                     'domain': [
                         ('id', '=', int(invoice_id)),
                         ('move_type', '=', 'out_invoice'),
-                        ('invoice_line_ids.sale_line_ids.order_id.user_id', '=', request.user.odoo_user_id)
+                        ('user_id', '=', request.user.odoo_user_id)
                     ],
                     'fields': [
                         'id', 'name', 'invoice_date', 'invoice_date_due',
@@ -283,6 +295,11 @@ class InvoiceDetailAPIView(GenericAPIView):
                         'invoice_origin', 'ref', 'invoice_payment_term_id',
                     ],
                     'limit': 1
+                },
+                relation_fields={
+                    'currency_id': ['id', 'name', 'symbol'],
+                    'partner_id': ['id', 'name', 'email'],
+                    'invoice_payment_term_id': ['id', 'name'],
                 }
             )
             
@@ -357,27 +374,27 @@ class InvoicePaymentListAPIView(GenericAPIView):
                 return odoo
 
             # Verify invoice belongs to user's order
-            invoice_result = odoo.call(
-                model='account.move',
-                method='search_read',
-                kwargs={
-                    'domain': [
-                        ('id', '=', int(invoice_id)),
-                        ('move_type', '=', 'out_invoice'),
-                        ('invoice_line_ids.sale_line_ids.order_id.user_id', '=', request.user.odoo_user_id)
-                    ],
-                    'fields': ['id', 'name', 'amount_total', 'amount_residual'],
-                    'limit': 1
-                }
-            )
+            # invoice_result = odoo.call(
+            #     model='account.move',
+            #     method='search_read',
+            #     kwargs={
+            #         'domain': [
+            #             ('id', '=', int(invoice_id)),
+            #             ('move_type', '=', 'out_invoice'),
+            #             ('user_id', '=', request.user.odoo_user_id)
+            #         ],
+            #         'fields': ['id', 'name', 'amount_total', 'amount_residual'],
+            #         'limit': 1
+            #     }
+            # )
             
-            if not invoice_result.get('result'):
-                return Response(
-                    {"error": "Invoice not found or access denied"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+            # if not invoice_result.get('result'):
+            #     return Response(
+            #         {"error": "Invoice not found or access denied"},
+            #         status=status.HTTP_404_NOT_FOUND
+            #     )
             
-            invoice = invoice_result['result'][0]
+            # invoice = invoice_result['result'][0]
             
             # Get payments reconciled with this invoice
             payment_result = odoo.call(
@@ -388,13 +405,14 @@ class InvoicePaymentListAPIView(GenericAPIView):
                         ('reconciled_invoice_ids', 'in', [int(invoice_id)]),
                     ],
                     'fields': [
-                        'id', 'name', 'amount', 'payment_date', 'date',
+                        'id', 'name', 'amount', 'date',
                         'state', 'payment_type', 'payment_method_line_id',
-                        'journal_id', 'ref', 'currency_id', 'partner_id',
+                        'journal_id', 'currency_id', 'partner_id',
                     ],
                 },
                 limit=page_size,
-                offset=offset
+                offset=offset,
+                sudo=True
             )
 
             payments = payment_result.get('result', [])
@@ -404,12 +422,6 @@ class InvoicePaymentListAPIView(GenericAPIView):
             
             return Response({
                 "payments": payments,
-                "invoice_info": {
-                    "id": invoice['id'],
-                    "name": invoice['name'],
-                    "amount_total": invoice['amount_total'],
-                    "amount_residual": invoice['amount_residual']
-                },
                 "pagination": {
                     "page": page,
                     "page_size": page_size,

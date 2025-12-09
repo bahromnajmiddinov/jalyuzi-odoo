@@ -16,6 +16,7 @@ Manage blinds sale
         'views/order_line_view.xml',
         'views/product_template_views.xml',
         'views/hr_employee_view.xml',
+        'views/res_user_views.xml',
     ],
     'auto_install': True,
     'license': 'LGPL-3',

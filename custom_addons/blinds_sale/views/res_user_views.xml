@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_res_users_form_inherit_blinds_sale" model="ir.ui.view">
+        <field name="name">res.users.form.inherit.blinds.sale</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook/page[@name='preferences']" position="inside">
+                <group string="Blinds Sale Information">
+                    <field name="is_delivery_person"/>
+                    <field name="debt_amount" readonly="1"/>
+                    <field name="debt_limit"/>
+                    <field name="profit_percentage"/>
+                    <field name="sale_debt" readonly="1"/>
+                    <field name="sale_debt_limit"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

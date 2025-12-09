@@ -32,6 +32,7 @@ class OrderListAPIView(GenericAPIView):
     """
     Returns paginated sale orders with metadata for the authenticated user.
     """
+    serializer_class = SaleOrderSerializer
     
     @extend_schema(
         parameters=[

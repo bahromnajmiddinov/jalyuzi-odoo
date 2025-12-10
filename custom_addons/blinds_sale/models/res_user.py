@@ -18,6 +18,15 @@ class ResUser(models.Model):
     sale_debt_limit = fields.Float(string='Sale Debt Limit', default=0.0)
     image_1920_url = fields.Char(string='Image URL', compute='_compute_image_url')
     
+    @api.depends('sale_order_ids')
+    def _compute_total_orders(self):
+        for employee in self:
+            if employee.user_id and employee.user_id.sale_order_ids:
+                total_orders = len(employee.user_id.sale_order_ids)
+            else:
+                total_orders = 0
+            employee.total_orders = total_orders
+    
     @api.depends('image_1920')
     def _compute_image_url(self):
         for employee in self:

@@ -170,7 +170,7 @@ class OdooRESTClient:
             logger.warning(f"Logout failed for {self.username}: {e}")
 
 
-def get_odoo_client(username, password, db="jdb", url="http://localhost:8069"):
+def get_odoo_client(username, password, db=settings.ODOO_DB or "jdb", url=settings.ODOO_URL or "http://localhost:8069"):
     """
     Get Odoo client instance for specific user.
     """

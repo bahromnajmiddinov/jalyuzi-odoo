@@ -34,8 +34,7 @@ class PaymentProof(models.Model):
     _description = 'Payment Proof'
     _order = 'payment_date desc'
 
-    name = fields.Char(string='Reference', required=True, 
-                      default=lambda self: self.env['ir.sequence'].next_by_code('payment.proof'))
+    name = fields.Char(string='Reference', default=lambda self: self.env['ir.sequence'].next_by_code('payment.proof'))
     payment_date = fields.Datetime(string='Payment Date', required=True, default=fields.Datetime.now)
     amount = fields.Float(string='Amount', required=True)
     currency_id = fields.Many2one('res.currency', string='Currency', 

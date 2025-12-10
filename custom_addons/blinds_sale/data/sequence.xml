@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sequence for Payment Proof -->
+    <record id="seq_payment_proof" model="ir.sequence">
+        <field name="name">Payment Proof</field>
+        <field name="code">payment.proof</field>
+        <field name="prefix">PP/</field>
+        <field name="padding">4</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+    </record>
+</odoo>

@@ -10,6 +10,7 @@ Manage blinds sale
     'depends': ['sale', 'hr', 'sales_invoice_detail', 'zehntech_sale_order_line_image',
                 'owl_sale_order_dashboard'],
     'data': [
+        'data/sequence.xml',
         'security/ir.model.access.csv',
         'views/formula_view.xml',
         'views/product_formula_wizard_view.xml',

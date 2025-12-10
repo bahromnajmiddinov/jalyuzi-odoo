@@ -31,7 +31,7 @@ class DynamicOdooCall(http.Controller):
             return {"error": "Model and method are required"}
         
         try:
-            mod`el_obj = request.env[model]
+            model_obj = request.env[model]
             
             if sudo:
                 model_obj = model_obj.sudo()

@@ -55,4 +55,6 @@ class ResUser(models.Model):
     @api.depends('total_sales', 'total_payments')
     def _compute_debt_amount(self):
         for employee in self:
-            employee.debt_amount = (employee.total_sales or 0.0) - (employee.total_payments or 0.0)
+            debt = (employee.total_sales or 0.0) - (employee.total_payments or 0.0)
+            employee.debt_amount = debt
+            employee.sale_debt = debt    # <-- You forgot this

@@ -661,6 +661,23 @@ class PaymentDetailAPIView(GenericAPIView):
             )
 
 
+def extract_id(result):
+    """
+    Extracts integer ID from 'payment.proof(12,)' or returns the raw int.
+    """
+    if isinstance(result, int):
+        return result
+    
+    if isinstance(result, str) and "payment.proof" in result:
+        return int(result.split("(")[1].split(",")[0])
+    
+    if isinstance(result, dict) and "result" in result:
+        raw = result["result"]  # "payment.proof(12,)"
+        return int(raw.split("(")[1].split(",")[0])
+
+    raise ValueError("Unable to extract ID from result")
+
+
 class OrderPaymentProofListAPIView(GenericAPIView):
     """
     List payment proofs for a specific order and create new payment proofs.
@@ -875,6 +892,8 @@ class OrderPaymentProofListAPIView(GenericAPIView):
                 )
             
             # Get created payment proof details
+            proof_id = extract_id(proof_id)
+            
             proof_result = odoo.call(
                 model='payment.proof',
                 method='search_read',

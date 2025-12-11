@@ -396,8 +396,8 @@ class DeliveryPersonAPIView(GenericAPIView):
                     'fields': [
                         'name', 'login', 'email', 'mobile', 'phone',
                         'partner_id', 'image_1920_url', 'total_sales',
-                        'total_orders', 'total_payments', 'debt_amount',
-                        'debt_limit', 'profit_percentage', 'sale_debt', 'sale_debt_limit',
+                        'total_orders', 'total_payments', 'profit_percentage',
+                        'sale_debt', 'sale_debt_limit',
                         'pending_orders', 'delivered_orders', 'cancelled_orders'
                     ],
                     'limit': 1
@@ -427,9 +427,9 @@ class DeliveryPersonAPIView(GenericAPIView):
             # If you have custom fields on res.partner for delivery stats, fetch them
             if partner_id:
                 partner_data = {
-                    'delivery_person_sale_debt': partner_id.get('delivery_person_sale_debt', 0.0),
-                    'delivery_person_sale_debt_limit': partner_id.get('delivery_person_sale_debt_limit', 0.0),
-                    'delivery_person_sales_amount': partner_id.get('delivery_person_sales_amount', 0.0),
+                    'delivery_person_sale_debt': partner_id.get('sale_debt', 0.0),
+                    'delivery_person_sale_debt_limit': partner_id.get('sale_debt_limit', 0.0),
+                    'delivery_person_sales_amount': partner_id.get('total_sales', 0.0),
                 }
                 
                 if partner_data:

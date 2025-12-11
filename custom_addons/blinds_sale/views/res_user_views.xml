@@ -5,15 +5,144 @@
         <field name="model">res.users</field>
         <field name="inherit_id" ref="base.view_users_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//sheet/notebook/page[@name='preferences']" position="inside">
-                <group string="Blinds Sale Information">
-                    <field name="is_delivery_person"/>
-                    <field name="debt_amount" readonly="1"/>
-                    <field name="debt_limit"/>
-                    <field name="profit_percentage"/>
-                    <field name="sale_debt" readonly="1"/>
-                    <field name="sale_debt_limit"/>
-                </group>
+            <xpath expr="//notebook" position="inside">
+                <page string="User Sales Info">
+                    <group>
+                        <field name="is_delivery_person"/>
+                    </group>
+                    <group string="Blinds Sale Information">
+                        <field name="is_delivery_person"/>
+                        <field name="profit_percentage"/>
+                        <field name="total_sales" readonly="1"/>
+                        <field name="total_orders" readonly="1"/>
+                        <field name="total_payments" readonly="1"/>
+                        <field name="pending_orders" readonly="1"/>
+                        <field name="delivered_orders" readonly="1"/>
+                        <field name="cancelled_orders" readonly="1"/>
+                        <field name="sale_debt" readonly="1"/>
+                        <field name="sale_debt_limit"/>
+                    </group>
+                </page>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="Sales Performance" name="user_sales_info" invisible="is_delivery_person == False">
+                    <!-- Summary Statistics Card -->
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="alert alert-info" role="alert">
+                                <strong>Sales Performance Dashboard</strong> - Overview of sales metrics and commission information
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats in Cards -->
+                    <div class="row mt16">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title o_default_snippet_text">Total Sales</h5>
+                                    <p class="card-text h3 text-primary">
+                                        <field name="total_sales" widget="monetary" readonly="1"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title o_default_snippet_text">Total Orders</h5>
+                                    <p class="card-text h3 text-success">
+                                        <field name="total_orders" readonly="1"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title o_default_snippet_text">Delivered</h5>
+                                    <p class="card-text h3 text-info">
+                                        <field name="delivered_orders" readonly="1"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title o_default_snippet_text">Pending</h5>
+                                    <p class="card-text h3 text-warning">
+                                        <field name="pending_orders" readonly="1"/>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Commission Configuration -->
+                    <group string="Commission Settings" name="commission_settings">
+                        <group>
+                            <field name="is_delivery_person" string="Is Delivery Person"/>
+                            <field name="profit_percentage" string="Commission %" invisible="is_delivery_person == True"/>
+                        </group>
+                        <group>
+                            <field name="sale_debt_limit" string="Credit Limit" 
+                                invisible="is_delivery_person == True"/>
+                        </group>
+                    </group>
+                    
+                    <!-- Financial Overview -->
+                    <group string="Financial Summary" name="financial_summary">
+                        <group>
+                            <field name="total_payments" string="Total Received Payments" widget="monetary" readonly="1"/>
+                            <field name="sale_debt" string="Current Balance" widget="monetary" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="cancelled_orders" string="Cancelled Orders" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <!-- Status Indicators with Progress Bars -->
+                    <!-- <group string="Performance Metrics" name="performance_metrics" attrs="{'invisible': [('total_orders', '=', 0)]}">
+                        <div class="row mt16">
+                            <div class="col-lg-6">
+                                <label>Delivery Success Rate</label>
+                                <div class="progress mb-3" style="height: 20px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                        t-att-style="'width: ' + ((record.delivered_orders.value / record.total_orders.value) * 100) + '%;'">
+                                        <t t-if="record.total_orders.value > 0">
+                                            <span>
+                                                <field name="delivery_success_rate" nolabel="1" />
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <label>Cancellation Rate</label>
+                                <div class="progress mb-3" style="height: 20px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" 
+                                        t-att-style="'width: ' + ((record.cancelled_orders.value / record.total_orders.value) * 100) + '%;'">
+                                        <t t-if="record.total_orders.value > 0">
+                                            <span>
+                                                <field name="cancellation_rate" nolabel="1" />
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </group> -->
+                    
+                    <!-- Additional Information -->
+                    <!-- <group string="Additional Information" name="additional_info">
+                        <label string="Last updated:"/>
+                        <field name="write_date" readonly="1" widget="datetime"/>
+                        <button type="object" name="refresh_sales_data" string="Refresh Statistics" 
+                                class="btn btn-primary" icon="fa-refresh"/>
+                    </group> -->
+                </page>
             </xpath>
         </field>
     </record>

@@ -56,7 +56,7 @@ class ResUser(models.Model):
     @api.depends('image_1920')
     def _compute_image_url(self):
         for user in self:
-            user.image_url_1920 = user._get_image_url('image_1920')
+            user.image_1920_url = user._get_image_url('image_1920')
     
     def _get_image_url(self, field_name):
         self.ensure_one()

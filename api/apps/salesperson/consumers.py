@@ -11,15 +11,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        self.group_name = f"user_{self.user.id}"
+        self.group_name = f"user_{self.user.odoo_user_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
         if self.user.is_authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        return 
-        
+        return await super().disconnect(close_code)
 
     async def send_notification(self, text_data):
         if isinstance(text_data, str):

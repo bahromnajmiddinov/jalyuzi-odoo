@@ -14,6 +14,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from .models import CustomUser
 from .serializers import (
@@ -23,6 +25,7 @@ from .serializers import (
     TokenRefreshSerializer,
 )
 from apps.utils.odoo import get_odoo_client
+from .permissions import IsOdoo
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +45,6 @@ def test_websocket(request):
     """
     Test sending a WebSocket message to the user group.
     """
-    from channels.layers import get_channel_layer
-    from asgiref.sync import async_to_sync
     
     try:
         channel_layer = get_channel_layer()
@@ -71,6 +72,40 @@ def test_websocket(request):
         logger.error(f"WebSocket error for user {request.user.id}: {str(e)}", exc_info=True)
         return Response(
             {"error": f"Failed to send WebSocket message: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsOdoo])
+def send_notification(request):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        logger.error("Channel layer is not configured")
+        return Response(
+            {"error": "WebSocket not configured"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+    message = request.data.get("message")
+    user_id = request.data.get("user_id")
+    
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            f"user_{user_id}",
+            {
+                "type": "send_notification",
+                "message": message,
+            }
+        )
+        
+        logger.info(f"WebSocket message sent to user_{request.user.id}")
+        return Response({"detail": "WebSocket message sent."})
+        
+    else:
+        logger.error("Channel layer is not configured")
+        return Response(
+            {"error": "WebSocket not configured"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

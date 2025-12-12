@@ -1,6 +1,8 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
+import requests
+
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
@@ -9,6 +11,32 @@ class SaleOrder(models.Model):
         'payment.proof', 'sale_order_id', string='Payment Proofs',
         help='List of payment proofs associated with this sale order.'
     )
+    
+    def write(self, vals):
+        delivery_status = vals.get('delivery_status')
+        message = None
+        if delivery_status == 'full':
+            message = f'Your order has been delivered, order number: {self.name}'
+        elif delivery_status == 'partial':
+            message = f'Your order has been partially delivered, order number: {self.name}'
+        elif delivery_status == 'started':
+            message = f'Your order has been started, order number: {self.name}'
+        if message:
+            try:
+                requests.post(
+                    'http://localhost:8000/api/v1/salesperson/send-notification',
+                    json={
+                        'message': message,
+                        'user_id': self.user_id.id,
+                    }, 
+                    headers={
+                        'X-ODOO-TOKEN': 'odoo_shared_token', 
+                        'X-ODOO-SERVER': 'https://jalyuzi.osson.uz/'
+                    })
+            except Exception as e:
+                pass
+            
+        return super().write(vals)
     
     @api.model
     def action_create_invoice(self, order_id):
@@ -44,6 +72,7 @@ class PaymentProof(models.Model):
     journal_id = fields.Many2one('account.journal', string='Payment Journal',
                                 domain="[('type', 'in', ('bank', 'cash'))]")
     proof_image = fields.Binary(string='Proof Image', attachment=True)
+    proof_image_url = fields.Char(string='Proof Image URL', compute='_compute_image_url')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('submitted', 'Submitted'),
@@ -59,6 +88,18 @@ class PaymentProof(models.Model):
     _sql_constraints = [
         ('amount_positive', 'CHECK(amount > 0)', 'Payment amount must be positive'),
     ]
+    
+    @api.depends('proof_image')
+    def _compute_image_url(self):
+        for proof in self:
+            proof.proof_image_url = self._get_image_url('proof_image')
+            
+    def _get_image_url(self, field_name):
+        self.ensure_one()
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        if getattr(self, field_name):
+            return f"{base_url}/web/image/product.template/{self.id}/{field_name}"
+        return False
     
     # Constraint methods must be class-level methods
     @api.constrains('journal_id', 'payment_method_id')

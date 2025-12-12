@@ -54,7 +54,7 @@ class ResUser(models.Model):
             employee.cancelled_orders = cancelled_orders
     
     @api.depends('image_1920')
-    def _compute_image_urls(self):
+    def _compute_image_url(self):
         for user in self:
             user.image_url_1920 = user._get_image_url('image_1920')
     

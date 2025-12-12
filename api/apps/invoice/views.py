@@ -763,7 +763,7 @@ class OrderPaymentProofListAPIView(GenericAPIView):
                     'fields': [
                         'id', 'name', 'payment_date', 'amount',
                         'currency_id', 'sale_order_id', 'payment_method_id',
-                        'journal_id', 'proof_image', 'state', 'notes',
+                        'journal_id', 'proof_image_url', 'state', 'notes',
                         'invoice_id', 'partner_id',
                     ],
                 },
@@ -967,7 +967,7 @@ class PaymentProofDetailAPIView(GenericAPIView):
                     'fields': [
                         'id', 'name', 'payment_date', 'amount',
                         'currency_id', 'sale_order_id', 'payment_method_id',
-                        'journal_id', 'proof_image', 'state', 'notes',
+                        'journal_id', 'proof_image_url', 'state', 'notes',
                         'invoice_id', 'partner_id', 'create_date', 'write_date',
                     ],
                     'limit': 1

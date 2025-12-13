@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Form view -->
+    <record id="view_partner_form_inherit_sales_payment" model="ir.ui.view">
+        <field name="name">res.partner.form.inherit.sales.payment</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <group name="payment_info" string="Payment Info" colspan="4" style="float:right">
+                    <field name="total_amount_paid" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                    <field name="total_amount_remaining" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Tree view -->
+    <record id="view_res_partner_tree_inherit_sales_payment" model="ir.ui.view">
+        <field name="name">res.partner.tree.inherit.sales.payment</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <!-- Place them after amount_total column; adjust position if needed -->
+                <field name="currency_id" invisible="1"/>
+                <field name="total_amount_paid" string="Paid" widget="monetary" options="{'currency_field': 'currency_id', 'current': True}" sum="Total" />
+                <field name="total_amount_remaining" string="Not paid" widget="monetary" options="{'currency_field': 'currency_id', 'current': True}" sum="Total" />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Kanban -->
+    <record id="view_res_partner_kanban_inherit_sales_payment" model="ir.ui.view">
+      <field name="name">res.partner.kanban.inherit.sales.payment</field>
+      <field name="model">res.partner</field>
+      <field name="inherit_id" ref="base.res_partner_kanban_view"/>
+      <field name="arch" type="xml">
+        <xpath expr="//footer" position="after">
+            <div style="display: flex; justify-content: space-between">
+                <p>Total amount paid:</p>
+                <field name="total_amount_paid"/>
+            </div>
+            <div style="display: flex; justify-content: space-between">
+                <p>Total amount remaining:</p>
+                <field name="total_amount_remaining"/>
+            </div>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Search -->
+    <record id="view_res_partner_search_inherit_sales_payment" model="ir.ui.view">
+        <field name="name">res.partner.search.inherit.sales.payment</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='type_company']" postion="after">
+                <filter string="Debtors" name="is_debtor" domain="[('is_debtor', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

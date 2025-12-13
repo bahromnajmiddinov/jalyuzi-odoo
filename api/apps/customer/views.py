@@ -128,7 +128,7 @@ class CustomerListAPIView(GenericAPIView):
                     'fields': [
                         'id', 'name', 'phone', 'street', 'street2', 
                         'city', 'zip', 'create_date', 'email', 'mobile',
-                        'country_id', 'state_id',
+                        'country_id', 'state_id', 'total_amount_remaining',
                     ],
                     'order': 'create_date desc',
                 },
@@ -265,6 +265,7 @@ class CustomerRetrieveAPIView(GenericAPIView):
                         'city', 'zip', 'email', 'mobile',
                         'country_id', 'state_id', 'create_date',
                         'write_date', 'vat', 'company_type',
+                        'total_amount_remaining',
                     ],
                     'limit': 1
                 },

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add payment fields to the sale order tree view -->
+    <record id="view_order_tree_inherit_payment" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.payment</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <!-- Place them after amount_total column; adjust position if needed -->
+                <field name="amount_invoiced" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                <field name="amount_paid" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                <field name="payment_state" widget="badge" 
+                    decoration-success="payment_state == 'paid'" 
+                    decoration-warning="payment_state == 'not_paid' or payment_state == 'partial'" 
+                    decoration-info="payment_state == 'no_invoices'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Add payment fields to the sale order form view header -->
+    <record id="view_order_form_inherit_payment" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.payment</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add to header for quick glance -->
+            <xpath expr="/form/header" position="inside">
+                <group name="payment_info" string="Payment Info" colspan="4" style="float:right">
+                    <field name="payment_state" widget="badge" 
+                        decoration-success="payment_state == 'paid'" 
+                        decoration-warning="payment_state == 'not_paid' or payment_state == 'partial'" 
+                        decoration-info="payment_state == 'no_invoices'"/>
+                    <field name="amount_invoiced" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                    <field name="amount_paid" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                </group>
+            </xpath>
+
+            <!-- Optionally add to a specific notebook/page (uncomment and adjust if desired) -->
+            <!--
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Accounting Summary">
+                    <group>
+                        <field name="payment_state"/>
+                        <field name="amount_invoiced" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                        <field name="amount_paid" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                    </group>
+                </page>
+            </xpath>
+            -->
+        </field>
+    </record>
+</odoo>

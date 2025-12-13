@@ -1,0 +1,53 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* vendor_payables_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-09 08:19+0000\n"
+"PO-Revision-Date: 2025-08-09 08:19+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: vendor_payables_report
+#: model_terms:ir.ui.view,arch_db:vendor_payables_report.view_res_partner_vendor_payables_kanban
+msgid "<strong>Total Owed:</strong>"
+msgstr "<strong>Общая задолженность:</strong>"
+
+#. module: vendor_payables_report
+#: model:ir.model.fields,field_description:vendor_payables_report.field_res_partner__vendor_due_amount
+#: model:ir.model.fields,field_description:vendor_payables_report.field_res_users__vendor_due_amount
+msgid "Amount to Pay"
+msgstr "Сумма к оплате"
+
+#. module: vendor_payables_report
+#: model:ir.model,name:vendor_payables_report.model_res_partner
+msgid "Contact"
+msgstr "Контакт"
+
+#. module: vendor_payables_report
+#: model:ir.model.fields,field_description:vendor_payables_report.field_res_partner__currency_id
+#: model:ir.model.fields,field_description:vendor_payables_report.field_res_users__currency_id
+msgid "Currency"
+msgstr "Валюта"
+
+#. module: vendor_payables_report
+#: model_terms:ir.ui.view,arch_db:vendor_payables_report.view_res_partner_tree_inherit_vendor
+msgid "Total"
+msgstr "Итого"
+
+#. module: vendor_payables_report
+#: model_terms:ir.ui.view,arch_db:vendor_payables_report.view_res_partner_vendor_payables_graph
+msgid "Vendor Debt"
+msgstr "Долг поставщику"
+
+#. module: vendor_payables_report
+#: model_terms:ir.ui.view,arch_db:vendor_payables_report.view_res_partner_vendor_payables_pivot
+msgid "Vendor Payables Report"
+msgstr "Отчёт по задолженностям перед поставщиками"

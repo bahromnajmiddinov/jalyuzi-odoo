@@ -11,6 +11,7 @@ class OrderLineSerializer(serializers.Serializer):
         default=False,
         help_text="If checked, the order line will take into account the remaining stock of the product."
     )
+    list_price = serializers.FloatField(required=False, allow_null=True)
 
 
 class SaleOrderSerializer(serializers.Serializer):

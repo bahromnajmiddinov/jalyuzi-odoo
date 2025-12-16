@@ -637,7 +637,7 @@ class ProductFullAPIView(GenericAPIView):
                         'categ_id', 'product_tag_ids', 'qty_available',
                         'product_variant_ids',
                         'attribute_line_ids',
-                        'combo_ids',
+                        'combo_ids', 'formula_id',
                     ]
                 },
                 limit=page_size,
@@ -652,6 +652,7 @@ class ProductFullAPIView(GenericAPIView):
                     'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
+                    'formula_id': ['id', 'name', 'formula', 'remains_formula'],
                 }
             )
 
@@ -712,7 +713,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                         'categ_id', 'product_tag_ids', 'qty_available',
                         'product_variant_ids',
                         'attribute_line_ids',
-                        'combo_ids',
+                        'combo_ids', 'formula_id',
                     ],
                     'limit': 1
                 },
@@ -726,6 +727,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                     'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
+                    'formula_id': ['id', 'name', 'formula', 'remains_formula'],
                 }
             )
             

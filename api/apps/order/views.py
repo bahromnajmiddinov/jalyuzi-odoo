@@ -212,7 +212,8 @@ class OrderListAPIView(GenericAPIView):
                     )
                 
                 product = products[0]
-                line_total = product['list_price'] * line['quantity']
+                line_price =  line.get('list_price', product['list_price'])
+                line_total = line_price * line['quantity']
                 total_amount += line_total
                 
                 order_lines.append((0, 0, {
@@ -222,6 +223,7 @@ class OrderListAPIView(GenericAPIView):
                     'width': line.get('width', 0.0),
                     'count': line.get('count', 1),
                     'take_remains': line.get('take_remains', False),
+                    'price_unit': line.get('list_price', product['list_price']),
                 }))
 
             # Check user's debt limit (using user_id instead of salesperson_id)
@@ -319,7 +321,7 @@ class OrderDetailAPIView(GenericAPIView):
                         'order_line', 'note', 'amount_to_invoice', 
                         'access_url', 'access_token', 'date_order',
                         'create_date', 'amount_untaxed', 'amount_tax',
-                        'payment_proof_ids', 'delivery_status',
+                        'payment_proof_ids', 'delivery_status'
                     ],
                     'limit': 1
                 },
@@ -409,6 +411,7 @@ class OrderDetailAPIView(GenericAPIView):
                     'height': line.get('height', 0.0),
                     'width': line.get('width', 0.0),
                     'count': line.get('count', 0),
+                    'price_unit': line.get('list_price', 0.0),
                 }))
 
             # Update the sale order

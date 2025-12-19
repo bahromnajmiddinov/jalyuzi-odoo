@@ -586,7 +586,7 @@ class ProductFullAPIView(GenericAPIView):
         summary="List all products with pagination and optional filtering",
     )
     def get(self, request):
-        domain = []
+        domain = [('sale_ok', '=', True)]
 
         # Get query parameters
         tag_id = request.query_params.get('tag')

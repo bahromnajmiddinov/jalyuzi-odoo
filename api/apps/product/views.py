@@ -638,6 +638,7 @@ class ProductFullAPIView(GenericAPIView):
                         'product_variant_ids',
                         'attribute_line_ids',
                         'combo_ids', 'formula_id',
+                        'optional_product_ids',
                     ]
                 },
                 limit=page_size,
@@ -653,6 +654,7 @@ class ProductFullAPIView(GenericAPIView):
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
                     'formula_id': ['id', 'name', 'formula', 'remains_formula'],
+                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
                 }
             )
 
@@ -714,6 +716,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                         'product_variant_ids',
                         'attribute_line_ids',
                         'combo_ids', 'formula_id',
+                        'optional_product_ids',
                     ],
                     'limit': 1
                 },
@@ -728,6 +731,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
                     'formula_id': ['id', 'name', 'formula', 'remains_formula'],
+                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
                 }
             )
             

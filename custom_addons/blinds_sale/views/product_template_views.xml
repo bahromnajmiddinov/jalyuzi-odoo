@@ -16,6 +16,16 @@
                     <field name="width"/>
                     <field name="profit_percentage"/>
                 </xpath>
+
+                <xpath expr="//notebook" position="inside">
+                    <page string="Optional Settings">
+                        <group>
+                            <field name="is_auto_add"/>
+                            <field name="is_auto_hide"/>
+                            <field name="use_parent_dimensions"/>
+                        </group>
+                    </page>
+                </xpath>
             </field>
         </record>
         

@@ -18,6 +18,11 @@ class ProductTemplate(models.Model):
     image_url_512 = fields.Char(string='Image URL 512', compute='_compute_image_urls')
     image_url_256 = fields.Char(string='Image URL 256', compute='_compute_image_urls')
     image_url_128 = fields.Char(string='Image URL 128', compute='_compute_image_urls')
+    
+    # other product fields
+    is_auto_add = fields.Boolean(default=False)
+    is_auto_hide = fields.Boolean(default=False)
+    use_parent_dimensions = fields.Boolean(default=False)
         
     @api.depends('image_1920', 'image_1024', 'image_512', 'image_256', 'image_128')
     def _compute_image_urls(self):

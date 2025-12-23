@@ -13,6 +13,7 @@ class ProductFormula(models.Model):
     remains_formula = fields.Text('Remains Formula', help='e.g., (width * height) * base_price if take_remains else 0')
     available_fields = fields.Text('Available Fields', help='e.g., width, height, base_price, base_width, base_height, max, count, floor')
     active = fields.Boolean('Active', default=True)
+    is_for_price = fields.Boolean('Is for Price', default=False)
     
     @api.constrains('formula')
     def _check_formula_safety(self):

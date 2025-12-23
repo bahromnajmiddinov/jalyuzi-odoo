@@ -420,7 +420,7 @@ class ProductFormulaRetrieveAPIView(GenericAPIView):
                 kwargs={
                     'domain': [('id', '=', int(id))],
                     'fields': [
-                        'id', 'name', 'formula', 'active'
+                        'id', 'name', 'formula', 'active', 'is_for_price'
                     ],
                     'limit': 1
                 }
@@ -654,7 +654,7 @@ class ProductFullAPIView(GenericAPIView):
                     'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
-                    'formula_id': ['id', 'name', 'formula', 'remains_formula'],
+                    'formula_id': ['id', 'name', 'formula', 'remains_formula', 'is_for_price'],
                     'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
                 }
             )
@@ -732,7 +732,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                     'attribute_line_ids': ['id', 'attribute_id', 'value_ids'],
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
-                    'formula_id': ['id', 'name', 'formula', 'remains_formula'],
+                    'formula_id': ['id', 'name', 'formula', 'remains_formula', 'is_for_price'],
                     'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
                 }
             )

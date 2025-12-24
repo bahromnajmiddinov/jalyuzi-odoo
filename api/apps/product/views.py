@@ -640,6 +640,7 @@ class ProductFullAPIView(GenericAPIView):
                         'combo_ids', 'formula_id',
                         'optional_product_ids',
                         'is_auto_add', 'is_auto_hide', 'use_parent_dimensions',
+                        'height', 'width',
                     ]
                 },
                 limit=page_size,
@@ -719,6 +720,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                         'combo_ids', 'formula_id',
                         'optional_product_ids',
                         'is_auto_add', 'is_auto_hide', 'use_parent_dimensions',
+                        'height', 'width',
                     ],
                     'limit': 1
                 },

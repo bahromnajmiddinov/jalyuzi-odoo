@@ -64,7 +64,7 @@ class DynamicOdooCall(http.Controller):
                     total_count = model_obj.search_count(domain)
                 
                 # Apply profit percentage if needed
-                if model == 'product.template' and method in ['search_read', 'read'] and employee:
+                if model in ['product.template', 'product.product'] and method in ['search_read', 'read'] and employee:
                     profit = employee.profit_percentage or 0
                     for record in result:
                         price = record.get('list_price') or 0

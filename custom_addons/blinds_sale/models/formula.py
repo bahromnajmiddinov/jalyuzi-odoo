@@ -54,6 +54,9 @@ class ProductFormulaWizard(models.TransientModel):
         
         self.ensure_one()
         try:
+            if not self.take_remains:
+                return 0
+            
             if self.take_remains:
                 formula = self.formula_id.formula
             else:

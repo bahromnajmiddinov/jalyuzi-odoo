@@ -25,6 +25,7 @@
                         <field name="formula"/>
                         <field name="remains_formula"/>
                         <field name="active"/>
+                        <field name="is_for_price"/>
                     </group>
                 </sheet>
             </form>

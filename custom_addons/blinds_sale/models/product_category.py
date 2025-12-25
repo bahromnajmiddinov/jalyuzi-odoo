@@ -11,6 +11,7 @@ class ProductCategory(models.Model):
     )
     image_1920 = fields.Binary()
     image_url_1920 = fields.Char(string='Image URL 1920', compute='_compute_image_urls')
+    hide_from_mobile_app = fields.Boolean(default=False)
     
     @api.depends('image_1920')
     def _compute_image_urls(self):

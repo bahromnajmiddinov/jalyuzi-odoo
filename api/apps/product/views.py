@@ -277,7 +277,7 @@ class ProductCategoryListAPIView(GenericAPIView):
                 method='search_read',
                 kwargs={
                     'fields': [
-                        'id', 'name', 'product_count', 'image_url_1920'
+                        'id', 'name', 'product_count', 'image_url_1920', 'hide_from_mobile_app',
                     ]
                 },
                 limit=page_size,
@@ -491,11 +491,17 @@ class ProductFormulaCalculateAPIView(GenericAPIView):
                 }]
             )
             
+            def _get_id_from_odoo_object_string(obj_str):
+                # product.formula.wizard(6,)
+                return int(obj_str.split('(')[1].split(',')[0])
+            
             # Apply formula for first wizard
+            result_1_result = formula_wizard_id_1.get('result')
+            result_1_id = _get_id_from_odoo_object_string(result_1_result) if result_1_result else None
             result_1 = odoo.call(
                 model='product.formula.wizard',
                 method='apply_formula',
-                args=[formula_wizard_id_1]
+                kwargs={'id': result_1_id}
             )
             
             # Create second wizard with take_remains=False
@@ -513,16 +519,18 @@ class ProductFormulaCalculateAPIView(GenericAPIView):
             )
             
             # Apply formula for second wizard
+            result_2_result = formula_wizard_id_2.get('result')
+            result_2_id = _get_id_from_odoo_object_string(result_2_result) if result_2_result else None
             result_2 = odoo.call(
                 model='product.formula.wizard',
                 method='apply_formula',
-                args=[formula_wizard_id_2]
+                kwargs={'id': result_2_id}
             )
             
             return Response({
-                'result_with_remains': result_1,
-                'result_without_remains': result_2,
-                'combined_result': f'{result_1},{result_2}'
+                'result_with_remains': result_1.get('result'),
+                'result_without_remains': result_2.get('result'),
+                'combined_result': f'{result_1.get("result")},{result_2.get("result")}'
             }, status=status.HTTP_200_OK)
 
         except Exception as e:

@@ -456,7 +456,8 @@ class DeliveryPersonAPIView(GenericAPIView):
                 'name': odoo_user.get('name'),
                 'email': odoo_user.get('email'),
                 'phone': odoo_user.get('mobile') or odoo_user.get('phone'),
-                'avatar': odoo_user.get('image_1920'),
+                'avatar': odoo_user.get('image_1920_url'),
+                'profit_percentage': odoo_user.get('profit_percentage'),
             }
             
             # If you have custom fields on res.partner for delivery stats, fetch them

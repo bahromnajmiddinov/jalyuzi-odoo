@@ -54,9 +54,6 @@ class ProductFormulaWizard(models.TransientModel):
         
         self.ensure_one()
         try:
-            if not self.take_remains:
-                return 0
-            
             if self.take_remains:
                 formula = self.formula_id.formula
             else:
@@ -76,6 +73,10 @@ class ProductFormulaWizard(models.TransientModel):
                 'if': lambda condition, true_val, false_val: true_val if condition else false_val,
                 'else': lambda condition, true_val, false_val: true_val if not condition else false_val,
             }
+            
+            if formula in [None, False]:
+                return 0
+            
             self.result = eval(formula, {'__builtins__': None}, allowed_vars)
             # from_ui = self.env.context.get('from_ui', False)
             if self.order_line_id:

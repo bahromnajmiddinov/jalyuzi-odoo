@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_saleorder_inherit_hide_line_prices"
+              inherit_id="sale.report_saleorder_document">
+
+        <!-- ===== TABLE HEADERS ===== -->
+        <xpath expr="//th[@name='th_priceunit']" position="replace"/>
+        <xpath expr="//th[@name='th_discount']" position="replace"/>
+        <xpath expr="//th[@name='th_taxes']" position="replace"/>
+        <xpath expr="//th[@name='th_subtotal']" position="replace"/>
+
+        <!-- ===== LINE VALUES ===== -->
+        <!-- Unit price -->
+        <xpath expr="//td[@name='td_priceunit']" position="replace"/>
+
+        <!-- Discount -->
+        <!-- <xpath expr="//td[t-field='line.discount']" position="replace"/> -->
+        <xpath expr="//td[strong[contains(@class,'text-info')]]" position="replace"/>
+
+        <!-- Taxes -->
+        <xpath expr="//td[@name='td_taxes']" position="replace"/>
+
+        <!-- Subtotal -->
+        <xpath expr="//td[@name='td_subtotal']" position="replace"/>
+
+        <!-- ===== SECTION SUBTOTAL ===== -->
+        <xpath expr="//tr[contains(@class,'is-subtotal')]" position="replace"/>
+
+        <!-- ===== TOTALS BLOCK (BOTTOM) ===== -->
+        <xpath expr="//div[@name='so_total_summary']" position="replace"/>
+
+        <!-- Hide sale order line completely -->
+        <xpath expr="//tr[@t-att-class]" position="attributes">
+            <attribute name="t-if">
+                (line.display_type or line.product_type == 'combo' or not line.product_id.is_auto_hide)
+            </attribute>
+        </xpath>
+
+    </template>
+</odoo>

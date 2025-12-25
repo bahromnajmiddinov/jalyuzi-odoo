@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="sale_order_portal_content_hide_line_prices"
+              inherit_id="sale.sale_order_portal_content">
+
+        <!-- ===== TABLE HEADERS ===== -->
+        <xpath expr="//th[normalize-space()='Unit Price']" position="replace"/>
+        <xpath expr="//th[@id='taxes_header']" position="replace"/>
+        <xpath expr="//th[@id='subtotal_header']" position="replace"/>
+        <xpath expr="//th[.//span[text()='Disc.%']]" position="replace"/>
+
+        <!-- ===== LINE VALUES ===== -->
+        <!-- Unit price -->
+        <xpath expr="//td[div[@t-field='line.price_unit']]" position="replace"/>
+
+        <!-- Discount -->
+        <xpath expr="//td[strong[contains(@class,'text-info')]]" position="replace"/>
+
+        <!-- Taxes -->
+        <xpath expr="//td[@id='taxes']" position="replace"/>
+
+        <!-- Subtotal -->
+        <xpath expr="//span[@t-field='line.price_subtotal']" position="replace"/>
+
+        <!-- ===== SECTION SUBTOTAL ROW ===== -->
+        <xpath expr="//tr[contains(@class,'is-subtotal')]" position="replace"/>
+
+        <!-- Hide whole line if product.is_auto_hide is True -->
+        <xpath expr="//tr[@t-att-class]" position="attributes">
+            <attribute name="t-if">
+                (line.display_type or line.product_type == 'combo' or not line.product_id.is_auto_hide)
+            </attribute>
+        </xpath>
+
+    </template>
+</odoo>

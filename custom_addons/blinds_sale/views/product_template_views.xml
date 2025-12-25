@@ -23,6 +23,7 @@
                             <field name="is_auto_add"/>
                             <field name="is_auto_hide"/>
                             <field name="use_parent_dimensions"/>
+                            <field name="is_kpi_product"/>
                         </group>
                     </page>
                 </xpath>

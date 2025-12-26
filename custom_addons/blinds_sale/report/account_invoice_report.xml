@@ -29,9 +29,9 @@
         <xpath expr="//div[@id='right-elements']" position="replace"/>
 
         <!-- Hide invoice line completely -->
-        <xpath expr="//tr[@t-att-class]" position="attributes">
+        <xpath expr="//tbody[contains(@class, 'invoice_tbody')]//tr" position="attributes">
             <attribute name="t-if">
-                (line.display_type or not line.product_id.is_auto_hide)
+                line.display_type == 'combo' or not line.product_id.is_auto_hide
             </attribute>
         </xpath>
 

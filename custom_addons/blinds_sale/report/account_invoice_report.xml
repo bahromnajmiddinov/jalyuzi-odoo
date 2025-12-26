@@ -26,7 +26,7 @@
         <xpath expr="//tr[contains(@class,'is-subtotal')]" position="replace"/>
 
         <!-- ===== TOTALS / PAYMENTS / QR ===== -->
-        <xpath expr="//div[@id='right-elements']" position="replace"/>
+        <!-- <xpath expr="//div[@id='right-elements']" position="replace"/> -->
 
         <!-- Hide invoice line completely -->
         <xpath expr="//tbody[contains(@class, 'invoice_tbody')]//tr" position="attributes">

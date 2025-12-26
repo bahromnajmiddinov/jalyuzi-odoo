@@ -332,7 +332,7 @@ class OrderDetailAPIView(GenericAPIView):
                     'product_tag_ids': ['id', 'name', 'color'],
                     'order_line': ['id', 'product_id', 'product_uom_qty', 'price_unit', 'price_subtotal'],
                     'partner_id': ['id', 'name', 'email', 'phone'],
-                    'product_id': ['id', 'name', 'list_price'],
+                    'product_id': ['id', 'name', 'list_price', 'is_auto_add', 'is_auto_hide', 'use_parent_dimensions',],
                 },
             )
             

@@ -13,7 +13,7 @@ class ProductFormula(models.Model):
     remains_formula = fields.Text('Remains Formula', help='e.g., (width * height) * base_price if take_remains else 0')
     available_fields = fields.Text('Available Fields', help='e.g., width, height, base_price, base_width, base_height, max, count, floor')
     active = fields.Boolean('Active', default=True)
-    is_for_price = fields.Boolean('Is for Price', default=False)
+    is_for_price = fields.Boolean('Is for Price', default=False, help='If checked, result will be set to price_unit instead of quantity')
     
     @api.constrains('formula')
     def _check_formula_safety(self):
@@ -54,10 +54,12 @@ class ProductFormulaWizard(models.TransientModel):
         
         self.ensure_one()
         try:
+            # Choose the right formula
             if self.take_remains:
-                formula = self.formula_id.formula
-            else:
                 formula = self.formula_id.remains_formula
+            else:
+                formula = self.formula_id.formula
+            
             # Create safe evaluation environment
             allowed_vars = {
                 'base_width': self.product_id.width,
@@ -75,17 +77,32 @@ class ProductFormulaWizard(models.TransientModel):
             }
             
             if formula in [None, False]:
-                return 0
+                self.result = 0
+            else:
+                self.result = eval(formula, {'__builtins__': None}, allowed_vars)
             
-            self.result = eval(formula, {'__builtins__': None}, allowed_vars)
-            # from_ui = self.env.context.get('from_ui', False)
+            # Update order line if present
             if self.order_line_id:
-                self.order_line_id.product_uom_qty = self.result
-                self.order_line_id.height = self.height
-                self.order_line_id.width = self.width
-                self.order_line_id.count = self.count
-                self.order_line_id.take_remains = self.take_remains
-            # if from_ui:
+                update_vals = {
+                    'height': self.height,
+                    'width': self.width,
+                    'count': self.count,
+                    'take_remains': self.take_remains,
+                }
+                
+                # Check if formula is for price or quantity
+                if self.formula_id.is_for_price:
+                    # Set result to unit price
+                    update_vals['price_unit'] = self.result
+                else:
+                    # Set result to quantity
+                    update_vals['product_uom_qty'] = self.result
+                
+                self.order_line_id.write(update_vals)
+                
+                # Update optional products with parent dimensions
+                self.order_line_id._update_optional_products_dimensions()
+            
             return self.result
         except Exception as e:
             raise UserError(_("Formula Error: %s") % str(e))
@@ -102,7 +119,7 @@ class ProductMeasurementWizard(models.TransientModel):
     height = fields.Float(required=True)
     count = fields.Float(required=True)
     take_remains = fields.Boolean(
-        'Take Remains' , 
+        'Take Remains', 
         default=False, 
         help='If checked, the formula will consider the remaining stock for calculations.'
     )

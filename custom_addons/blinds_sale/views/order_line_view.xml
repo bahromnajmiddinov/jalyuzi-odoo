@@ -171,6 +171,8 @@
                             
                             <button string="Show measurement" type="object" name="action_show_measurement" class="btn-secondary" column_invisible="not product_id.formula_id"/>
                             <button string="Calculate" type="object" name="action_recalculate_formula" class="oe_highlight"/>
+                            <button string="Add optionals" type="object" name="action_add_optional_products" class="btn-secondary"/>
+                            <button string="Calculate optionals" type="object" name="action_calculate_optional_products_formula" class="btn-secondary"/>
                         </list>
                         <kanban class="o_kanban_mobile">
                             <field name="price_subtotal"/>

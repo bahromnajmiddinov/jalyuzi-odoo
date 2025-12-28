@@ -80,7 +80,7 @@ class ProductFormulaWizard(models.TransientModel):
                 self.result = 0
             else:
                 self.result = eval(formula, {'__builtins__': None}, allowed_vars)
-            
+
             # Update order line if present
             if self.order_line_id:
                 update_vals = {
@@ -97,7 +97,7 @@ class ProductFormulaWizard(models.TransientModel):
                 else:
                     # Set result to quantity
                     update_vals['product_uom_qty'] = self.result
-                
+
                 self.order_line_id.write(update_vals)
                 
                 # Update optional products with parent dimensions

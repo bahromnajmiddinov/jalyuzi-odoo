@@ -7,6 +7,11 @@ class ProductCategory(models.Model):
     formula_id = fields.Many2one(
         'product.formula',
         string='Formula',
+        help='Formula to calculate the qty of products in this category.'
+    )
+    price_formula_id = fields.Many2one(
+        'product.formula',
+        string='Price Formula',
         help='Formula to calculate the price of products in this category.'
     )
     image_1920 = fields.Binary()

@@ -648,7 +648,7 @@ class ProductFullAPIView(GenericAPIView):
                         'combo_ids', 'formula_id',
                         'optional_product_ids',
                         'is_auto_add', 'is_auto_hide', 'use_parent_dimensions',
-                        'height', 'width', 'product_qty_field',
+                        'height', 'width', 'product_qty_field', 'price_formula_id',
                     ]
                 },
                 limit=page_size,
@@ -728,7 +728,7 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                         'combo_ids', 'formula_id',
                         'optional_product_ids',
                         'is_auto_add', 'is_auto_hide', 'use_parent_dimensions',
-                        'height', 'width', 'product_qty_field',
+                        'height', 'width', 'product_qty_field', 'price_formula_id',
                     ],
                     'limit': 1
                 },

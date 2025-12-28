@@ -12,6 +12,12 @@ class ProductTemplate(models.Model):
         string='Custom Formula',
         help='Formula to compute price dynamically.'
     )
+    price_formula_id = fields.Many2one(
+        # 'product.formula',
+        related='categ_id.price_formula_id',
+        string='Custom Price Formula',
+        help='Formula to compute price dynamically.'
+    )
     profit_percentage = fields.Float()
     image_url_1920 = fields.Char(string='Image URL 1920', compute='_compute_image_urls')
     image_url_1024 = fields.Char(string='Image URL 1024', compute='_compute_image_urls')

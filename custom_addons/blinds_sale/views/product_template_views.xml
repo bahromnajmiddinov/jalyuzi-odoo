@@ -44,6 +44,7 @@
                 <xpath expr="//field[@name='parent_id']" position="after">
                     <field name="image_1920" widget="image"/>
                     <field name="formula_id" />
+                    <field name="price_formula_id"/>
                     <field name="hide_from_mobile_app"/>
                 </xpath>
             </field>

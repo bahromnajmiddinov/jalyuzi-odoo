@@ -25,6 +25,15 @@ class ProductTemplate(models.Model):
     use_parent_dimensions = fields.Boolean(default=False)
     is_kpi_product = fields.Boolean(default=False)
     kpi_employee = fields.Many2one('hr.employee')
+    product_qty_field = fields.Selection(
+        [
+            ('default', 'Default'),
+            ('height', 'Height'),
+            ('width', 'Width'),
+            ('count', 'Count'),
+        ],
+        default='default',
+    )
         
     @api.depends('image_1920', 'image_1024', 'image_512', 'image_256', 'image_128')
     def _compute_image_urls(self):

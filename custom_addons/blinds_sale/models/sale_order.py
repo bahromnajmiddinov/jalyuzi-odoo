@@ -48,6 +48,9 @@ class SaleOrder(models.Model):
         self._create_invoices()
         return self.invoice_ids.ids
     
+    def action_create_blinds_mo(self):
+        pass    
+       
     @api.model
     def create(self, vals_list):
         if not vals_list.get('access_token'):

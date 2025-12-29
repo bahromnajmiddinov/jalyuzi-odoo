@@ -664,7 +664,8 @@ class ProductFullAPIView(GenericAPIView):
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
                     'formula_id': ['id', 'name', 'formula', 'remains_formula', 'is_for_price'],
-                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
+                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available', 'formula_id', 'price_formula_id', 'is_auto_add', 'is_auto_hide', 'use_parent_dimensions', 'height', 'width', 'product_qty_field'],
+                    'price_formula_id': ['id', 'name', 'formula', 'is_for_price'],
                 }
             )
 
@@ -743,7 +744,8 @@ class ProductFullRetrieveAPIView(GenericAPIView):
                     'combo_ids': ['id', 'name', 'discount_type', 'discount_value', 'combo_item_ids', 'basic_price'],
                     'combo_item_ids': ['id', 'product_id', 'original_price', 'extra_price'],
                     'formula_id': ['id', 'name', 'formula', 'remains_formula', 'is_for_price'],
-                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available'],
+                    'optional_product_ids': ['id', 'name', 'default_code', 'list_price', 'uom_id', 'image_url_1920', 'taxes_id', 'standard_price', 'categ_id', 'product_tag_ids', 'qty_available', 'formula_id', 'price_formula_id', 'is_auto_add', 'is_auto_hide', 'use_parent_dimensions', 'height', 'width', 'product_qty_field'],
+                    'price_formula_id': ['id', 'name', 'formula', 'remains_formula', 'is_for_price']
                 }
             )
             

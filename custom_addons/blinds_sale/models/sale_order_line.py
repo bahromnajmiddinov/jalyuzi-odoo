@@ -23,6 +23,17 @@ class SaleOrderLine(models.Model):
         ondelete='cascade'
     )
     
+    def _prepare_invoice_line(self, **optional_values):
+        vals = super()._prepare_invoice_line(**optional_values)
+
+        vals.update({
+            'width': self.width,
+            'height': self.height,
+            'count': self.count,
+        })
+
+        return vals
+    
     @api.onchange('product_id')
     def _onchange_product_id_set_kpi_employee(self):
         if self.product_id.is_kpi_product:

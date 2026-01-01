@@ -217,7 +217,7 @@ class SaleOrder(models.Model):
             'target': 'new',
         }
     
-    @api.constrains('production_start_date', 'production_end_date')
+    # @api.constrains('production_start_date', 'production_end_date')
     def _check_production_requirements(self):
         self.ensure_one()
         if self.state not in ['sale', 'done']:

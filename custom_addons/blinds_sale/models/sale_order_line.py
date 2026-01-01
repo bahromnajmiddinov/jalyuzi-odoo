@@ -23,6 +23,18 @@ class SaleOrderLine(models.Model):
         ondelete='cascade'
     )
     
+    def create(self, values_list):
+        lines = super().create(values_list)
+
+        for line in lines:
+            user_profit_percentage = line.order_id.user_id.profit_percentage or 0
+            if user_profit_percentage:
+                line.write({
+                    'price_unit': line.price_unit * (1 + user_profit_percentage / 100)
+                })
+
+        return lines
+    
     def _prepare_invoice_line(self, **optional_values):
         vals = super()._prepare_invoice_line(**optional_values)
 

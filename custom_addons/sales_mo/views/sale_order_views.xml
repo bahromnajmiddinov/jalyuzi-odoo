@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================= -->
+    <!-- Sale Order Form: Production Integration -->
+    <!-- ========================================================= -->
+    <record id="view_order_form_production" model="ir.ui.view">
+        <field name="name">sale.order.form.production</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+
+            <!-- ================= HEADER ================= -->
+            <xpath expr="//header" position="inside">
+                <field name="production_state"
+                       widget="statusbar"
+                       statusbar_visible="not_ready,ready,in_production,completed"/>
+
+                <!-- Emergency action only -->
+                <button name="action_hold_production"
+                        string="Put On Hold"
+                        type="object"
+                        class="oe_secondary"
+                        invisible="production_state not in ['ready','in_production']"/>
+            </xpath>
+
+            <!-- ================= SMART BUTTON ================= -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_production_wizard"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-industry"
+                        invisible="production_state == 'not_ready'">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value">
+                            <field name="production_state"/>
+                        </span>
+                        <span class="o_stat_text">Production</span>
+                    </div>
+                </button>
+            </xpath>
+
+            <!-- ================= PRODUCTION TAB ================= -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Production" name="production">
+
+                    <!-- ===== ACTION BUTTONS (MAIN WORKFLOW) ===== -->
+                    <div class="oe_button_box" name="production_buttons">
+                        <button name="action_mark_ready_for_production"
+                                string="Mark Ready"
+                                type="object"
+                                class="oe_highlight"
+                                invisible="production_state != 'not_ready'"/>
+
+                        <button name="action_start_production"
+                                string="Start Production"
+                                type="object"
+                                class="oe_highlight"
+                                invisible="production_state not in ['ready','on_hold']"/>
+
+                        <button name="action_complete_production"
+                                string="Complete Production"
+                                type="object"
+                                class="btn-primary"
+                                invisible="production_state != 'in_production'"/>
+                    </div>
+
+                    <!-- ===== STATUS & RESPONSIBILITY ===== -->
+                    <group>
+                        <group string="Production Status">
+                            <field name="is_production_ready" widget="boolean_toggle" readonly="1"/>
+                            <field name="production_priority" widget="priority"/>
+                            <field name="production_responsible_id"/>
+                            <field name="production_ready_date" readonly="1"/>
+                        </group>
+
+                        <group string="Production Schedule">
+                            <field name="production_expected_date"/>
+                            <field name="production_start_date"/>
+                            <field name="production_end_date"/>
+                            <field name="production_duration" readonly="1"/>
+                            <field name="production_delay"
+                                   readonly="1"
+                                   invisible="production_delay == 0"/>
+                        </group>
+                    </group>
+
+                    <!-- ===== REQUIREMENTS ===== -->
+                    <group string="Production Requirements">
+                        <group>
+                            <field name="materials_available" widget="boolean_toggle"/>
+                            <field name="specifications_confirmed" widget="boolean_toggle"/>
+                        </group>
+                        <group>
+                            <field name="payment_received" widget="boolean_toggle" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- ===== NOTES ===== -->
+                    <group string="Production Notes">
+                        <field name="production_notes"
+                               nolabel="1"
+                               placeholder="Production instructions, special requirements, notes..."/>
+                    </group>
+
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ========================================================= -->
+    <!-- Sale Order Tree View -->
+    <!-- ========================================================= -->
+    <record id="view_order_tree_production" model="ir.ui.view">
+        <field name="name">sale.order.tree.production</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="production_state"
+                       widget="badge"
+                       decoration-success="production_state == 'completed'"
+                       decoration-info="production_state == 'in_production'"
+                       decoration-warning="production_state == 'ready'"
+                       decoration-danger="production_state == 'on_hold'"/>
+
+                <field name="production_priority" widget="priority" optional="show"/>
+                <field name="production_expected_date" optional="show"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ========================================================= -->
+    <!-- Production Kanban Dashboard -->
+    <!-- ========================================================= -->
+    <record id="view_production_dashboard_kanban" model="ir.ui.view">
+        <field name="name">sale.order.production.kanban</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="production_state"
+                    class="o_kanban_small_column"
+                    quick_create="false">
+
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="production_state"/>
+                <field name="production_priority"/>
+                <field name="production_expected_date"/>
+                <field name="amount_total"/>
+                <field name="production_responsible_id"/>
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <strong>
+                                <field name="name"/>
+                            </strong>
+                            <div>
+                                <field name="partner_id"/>
+                            </div>
+                            <div>
+                                <field name="production_priority" widget="priority"/>
+                            </div>
+                            <div t-if="record.production_expected_date.raw_value">
+                                <i class="fa fa-clock-o"/> 
+                                <field name="production_expected_date"/>
+                            </div>
+                            <div>
+                                <field name="amount_total" widget="monetary"/>
+                            </div>
+                            <div>
+                                <field name="production_responsible_id"
+                                       widget="many2one_avatar_user"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ========================================================= -->
+    <!-- Production Dashboard Action -->
+    <!-- ========================================================= -->
+    <record id="action_production_dashboard" model="ir.actions.act_window">
+        <field name="name">Production Dashboard</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('production_state','!=','not_ready')]</field>
+    </record>
+
+    <!-- ========================================================= -->
+    <!-- Search Filters -->
+    <!-- ========================================================= -->
+    <record id="view_sales_order_production_filter" model="ir.ui.view">
+        <field name="name">sale.order.production.search</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//search" position="inside">
+
+                <filter
+                    name="production_ready"
+                    string="Ready"
+                    domain="[('production_state', '=', 'ready')]"/>
+
+                <filter
+                    name="production_in_progress"
+                    string="In Production"
+                    domain="[('production_state', '=', 'in_production')]"/>
+
+                <filter
+                    name="production_on_hold"
+                    string="On Hold"
+                    domain="[('production_state', '=', 'on_hold')]"/>
+
+                <filter
+                    name="production_completed"
+                    string="Completed"
+                    domain="[('production_state', '=', 'completed')]"/>
+
+                <separator/>
+
+                <filter
+                    name="production_delayed"
+                    string="Delayed"
+                    domain="[('production_delay', '>', 0)]"/>
+
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- ========================================================= -->
+    <!-- Menu -->
+    <!-- ========================================================= -->
+    <menuitem id="menu_production_dashboard"
+              name="Production Dashboard"
+              parent="sale.sale_order_menu"
+              action="action_production_dashboard"
+              sequence="20"/>
+
+</odoo>

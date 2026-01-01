@@ -448,10 +448,7 @@ class DeliveryPersonAPIView(GenericAPIView):
                 )
 
             odoo_user = odoo_user['result'][0]
-            
-            # Get partner details if needed (for additional fields)
-            partner_id = odoo_user.get('partner_id') if odoo_user.get('partner_id') else None
-            
+                        
             delivery_person_data = {
                 'name': odoo_user.get('name'),
                 'email': odoo_user.get('email'),
@@ -460,17 +457,6 @@ class DeliveryPersonAPIView(GenericAPIView):
                 'profit_percentage': odoo_user.get('profit_percentage'),
             }
             
-            # If you have custom fields on res.partner for delivery stats, fetch them
-            if partner_id:
-                partner_data = {
-                    'delivery_person_sale_debt': partner_id.get('sale_debt', 0.0),
-                    'delivery_person_sale_debt_limit': partner_id.get('sale_debt_limit', 0.0),
-                    'delivery_person_sales_amount': partner_id.get('total_sales', 0.0),
-                }
-                
-                if partner_data:
-                    delivery_person_data.update(partner_data)
-
             # Fetch sales statistics
             # Assuming sale.order has a field linking to the delivery user
             domain = [
@@ -490,13 +476,15 @@ class DeliveryPersonAPIView(GenericAPIView):
                 },
                 relation_fields={'partner_id': ['name', 'id']}
             )
-            print(orders)
+            
             # Calculate statistics
             total_sales = odoo_user.get('total_sales', 0.0)
             total_orders = odoo_user.get('total_orders', 0)
             pending_orders = odoo_user.get('pending_orders', 0)
             delivered_orders = odoo_user.get('delivered_orders', 0)
             cancelled_orders = odoo_user.get('cancelled_orders', 0)
+            sale_debt = odoo_user.get('sale_debt', 0.0)
+            sale_debt_limit = odoo_user.get('sale_debt_limit', 0.0)
 
             stats = {
                 "total_sales": total_sales,
@@ -504,7 +492,9 @@ class DeliveryPersonAPIView(GenericAPIView):
                 "pending_orders": pending_orders,
                 "delivered_orders": delivered_orders,
                 "cancelled_orders": cancelled_orders,
-                "recent_orders": orders['result'] if orders else []
+                "recent_orders": orders['result'] if orders else [],
+                "sale_debt": sale_debt,
+                "sale_debt_limit": sale_debt_limit,
             }
 
             response_data = {

@@ -131,7 +131,8 @@ class OrderListAPIView(GenericAPIView):
                         'order_line', 'note', 'amount_to_invoice',
                         'access_url', 'access_token', 'date_order',
                         'payment_proof_ids', 'user_id', 'create_date',
-                        'amount_untaxed', 'amount_tax', 'delivery_status',
+                        'amount_untaxed', 'amount_tax', 'delivery_status', 
+                        'production_state',
                     ],
                 },
                 relation_fields={
@@ -322,7 +323,7 @@ class OrderDetailAPIView(GenericAPIView):
                         'order_line', 'note', 'amount_to_invoice', 
                         'access_url', 'access_token', 'date_order',
                         'create_date', 'amount_untaxed', 'amount_tax',
-                        'payment_proof_ids', 'delivery_status'
+                        'payment_proof_ids', 'delivery_status', 'production_state',
                     ],
                     'limit': 1
                 },

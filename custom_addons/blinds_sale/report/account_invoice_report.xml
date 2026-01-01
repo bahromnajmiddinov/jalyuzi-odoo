@@ -5,6 +5,7 @@
 
         <!-- ===== TABLE HEADERS ===== -->
         <xpath expr="//th[@name='th_priceunit']" position="replace"/>
+        <xpath expr="//th[@name='th_quantity']" position="replace"/>
         <xpath expr="//th[@name='th_discount']" position="replace"/>
         <xpath expr="//th[@name='th_taxes']" position="replace"/>
         <xpath expr="//th[@name='th_subtotal']" position="before">
@@ -15,6 +16,9 @@
         <!-- ===== LINE VALUES ===== -->
         <!-- Unit price -->
         <xpath expr="//td[@name='td_price_unit']" position="replace"/>
+
+        <!-- Quantity -->
+        <xpath expr="//td[@name='td_quantity']" position="replace"/>
 
         <!-- Discount -->
         <xpath expr="//td[@name='td_discount']" position="replace"/>

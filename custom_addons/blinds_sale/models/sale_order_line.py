@@ -61,6 +61,7 @@ class SaleOrderLine(models.Model):
             'order_line_id': self.id,
             'product_id': self.product_id.id,
             'formula_id': self.product_id.formula_id.id,
+            'formula_price_id': self.product_id.formula_id.id,
             'width': self.width,
             'height': self.height,
             'count': self.count if self.count else 1,
@@ -98,7 +99,7 @@ class SaleOrderLine(models.Model):
     def action_recalculate_formula(self):
         self.ensure_one()
         
-        if not self.product_id.formula_id:
+        if not self.product_id.formula_id and not self.product_id.price_formula_id:
             raise ValidationError(_("Product does not have formula!"))
         
         return {
@@ -110,6 +111,7 @@ class SaleOrderLine(models.Model):
                 'default_order_line_id': self.id,
                 'default_product_id': self.product_id.id,
                 'default_formula_id': self.product_id.formula_id.id,
+                'default_formula_price_id': self.product_id.price_formula_id,
                 'default_width': self.width,
                 'default_height': self.height,
                 'default_count': self.count if self.count else 1,

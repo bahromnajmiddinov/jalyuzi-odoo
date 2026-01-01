@@ -5,3 +5,4 @@ from . import sale_order_line
 from . import formula
 from . import hr_employee
 from . import res_user
+from . import account_move_line

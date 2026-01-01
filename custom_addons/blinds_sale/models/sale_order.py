@@ -12,6 +12,17 @@ class SaleOrder(models.Model):
         help='List of payment proofs associated with this sale order.'
     )
     
+    def _prepare_invoice_line(self, **optional_values):
+        vals = super()._prepare_invoice_line(**optional_values)
+
+        vals.update({
+            'width': self.width,
+            'height': self.height,
+            'count': self.count,
+        })
+
+        return vals
+    
     def write(self, vals):
         delivery_status = vals.get('delivery_status')
         message = None

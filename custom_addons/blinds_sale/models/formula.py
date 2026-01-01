@@ -36,8 +36,10 @@ class ProductFormulaWizard(models.TransientModel):
 
     order_line_id = fields.Many2one('sale.order.line')
     formula_id = fields.Many2one('product.formula', required=True)
+    formula_price_id = fields.Many2one('product.formula')
     product_id = fields.Many2one('product.product', required=True)
     result = fields.Float(readonly=True)
+    price_result = fields.Float(readonly=True)
     
     width = fields.Float(required=True)
     height = fields.Float(required=True)
@@ -55,10 +57,11 @@ class ProductFormulaWizard(models.TransientModel):
         self.ensure_one()
         try:
             # Choose the right formula
-            if self.take_remains:
-                formula = self.formula_id.remains_formula
-            else:
-                formula = self.formula_id.formula
+            if self.formula_id:
+                if self.take_remains:
+                    formula = self.formula_id.remains_formula
+                else:
+                    formula = self.formula_id.formula
             
             # Create safe evaluation environment
             allowed_vars = {
@@ -80,6 +83,9 @@ class ProductFormulaWizard(models.TransientModel):
                 self.result = 0
             else:
                 self.result = eval(formula, {'__builtins__': None}, allowed_vars)
+            
+            if self.formula_price_id:
+                self.price_result = eval(self.formula_price_id, {'__builtins__': None}, allowed_vars)
 
             # Update order line if present
             if self.order_line_id:
@@ -97,6 +103,9 @@ class ProductFormulaWizard(models.TransientModel):
                 else:
                     # Set result to quantity
                     update_vals['product_uom_qty'] = self.result
+                
+                if self.price_result:
+                    update_vals['price_unit'] = self.price_result
 
                 self.order_line_id.write(update_vals)
                 

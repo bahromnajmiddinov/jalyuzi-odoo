@@ -7,7 +7,10 @@
         <xpath expr="//th[@name='th_priceunit']" position="replace"/>
         <xpath expr="//th[@name='th_discount']" position="replace"/>
         <xpath expr="//th[@name='th_taxes']" position="replace"/>
-        <xpath expr="//th[@name='th_subtotal']" position="replace"/>
+        <xpath expr="//th[@name='th_subtotal']" position="before">
+            <th>Dimensions</th>
+        </xpath>
+
 
         <!-- ===== LINE VALUES ===== -->
         <!-- Unit price -->
@@ -20,7 +23,15 @@
         <xpath expr="//td[@name='td_taxes']" position="replace"/>
 
         <!-- Subtotal -->
-        <xpath expr="//td[@name='td_subtotal']" position="replace"/>
+        <!-- <xpath expr="//td[@name='td_subtotal']" position="replace"/> -->
+
+        <xpath expr="//td[@name='td_subtotal']" position="replace">
+            <td>
+                <div>W: <span t-field="line.width"/></div>
+                <div>H: <span t-field="line.height"/></div>
+                <div>C: <span t-field="line.count"/></div>
+            </td>
+        </xpath>
 
         <!-- ===== SECTION SUBTOTAL ===== -->
         <xpath expr="//tr[contains(@class,'is-subtotal')]" position="replace"/>

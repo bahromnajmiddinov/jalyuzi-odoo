@@ -19,6 +19,7 @@ Manage blinds sale
         'views/hr_employee_view.xml',
         'views/res_user_views.xml',
         'views/sale_quotation_web_portal.xml',
+        'views/account_move_line_views.xml',
         'report/sale_order_report.xml',
         'report/account_invoice_report.xml',
     ],

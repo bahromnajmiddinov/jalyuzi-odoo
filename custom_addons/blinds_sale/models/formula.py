@@ -56,6 +56,7 @@ class ProductFormulaWizard(models.TransientModel):
         
         self.ensure_one()
         try:
+            formula = None
             # Choose the right formula
             if self.formula_id:
                 if self.take_remains:

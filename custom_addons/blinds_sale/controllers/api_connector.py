@@ -1,7 +1,19 @@
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
 
 class DynamicOdooCall(http.Controller):
+    
+    def _convert_datetime(self, value):
+        """
+        Convert UTC datetime to user's timezone (string)
+        """
+        if not value:
+            return None
+        try:
+            dt = fields.Datetime.context_timestamp(request.env.user, value)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return value
 
     @http.route('/custom_api/call', type='json', auth='user', csrf=False)
     def call_anything(self, **kw):
@@ -111,13 +123,6 @@ class DynamicOdooCall(http.Controller):
     def process_dict_result(self, data_dict, model_obj, depth=1, relation_fields=None):
         """
         Process a dictionary result from search_read/read to expand relational fields.
-        
-        Args:
-            data_dict: Dictionary from search_read/read
-            model_obj: The model object to get field info
-            depth: How deep to serialize nested relations
-            relation_fields: Dict of field_name -> list of fields to include
-                            e.g. {"categ_id": ["id", "name"], "uom_id": ["id", "name"]}
         """
         if depth <= 0:
             return data_dict
@@ -131,6 +136,26 @@ class DynamicOdooCall(http.Controller):
                 
             field = model_obj._fields[field_name]
             value = data_dict[field_name]
+            
+            # Convert datetime fields to user timezone
+            if field.type == 'datetime' and value:
+                if isinstance(value, str):
+                    # Parse the UTC string to datetime object first
+                    from datetime import datetime
+                    try:
+                        dt_value = fields.Datetime.from_string(value)
+                        result[field_name] = self._convert_datetime(dt_value)
+                    except:
+                        result[field_name] = value
+                else:
+                    result[field_name] = self._convert_datetime(value)
+            
+            # Convert date fields
+            elif field.type == 'date' and value:
+                if hasattr(value, 'isoformat'):
+                    result[field_name] = value.isoformat()
+                else:
+                    result[field_name] = value
             
             # Get allowed fields for this relation
             allowed_fields = relation_fields.get(field_name)
@@ -199,8 +224,14 @@ class DynamicOdooCall(http.Controller):
                 
             value = record[field_name]
 
+            if field.type in ('datetime', 'timestamp'):
+                data[field_name] = self._convert_datetime(value)
+
+            elif field.type == 'date':
+                data[field_name] = value.isoformat() if value else None
+
             # Basic fields
-            if field.type in ("char", "text", "float", "integer", "boolean", "monetary", "date", "datetime", "selection"):
+            elif field.type in ("char", "text", "float", "integer", "boolean", "monetary", "selection"):
                 data[field_name] = value
 
             # Many2one field

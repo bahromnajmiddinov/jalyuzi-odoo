@@ -113,7 +113,8 @@ class OdooRESTClient:
             "model": model,
             "method": method,
             "args": args or [],
-            "kwargs": kwargs or {}        }
+            "kwargs": kwargs or {}        
+        }
         
         # Add pagination parameters
         if limit is not None:

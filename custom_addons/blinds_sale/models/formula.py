@@ -85,7 +85,7 @@ class ProductFormulaWizard(models.TransientModel):
             else:
                 self.result = eval(formula, {'__builtins__': None}, allowed_vars)
             
-            if self.formula_price_id:
+            if self.formula_price_id and self.formula_price_id.formula:
                 self.price_result = eval(self.formula_price_id.formula, {'__builtins__': None}, allowed_vars)
 
             # Update order line if present

@@ -23,6 +23,13 @@ class SaleOrderLine(models.Model):
         ondelete='cascade'
     )
     
+    @api.onchange('product_id')
+    def _onchange_product_id_set_kpi_employee(self):
+        if self.product_id.is_kpi_product:
+            self.kpi_employee_id = self.product_id.kpi_employee
+        else:
+            self.kpi_employee_id = False
+    
     def _auto_add_optional_products(self):
         self.ensure_one()
 

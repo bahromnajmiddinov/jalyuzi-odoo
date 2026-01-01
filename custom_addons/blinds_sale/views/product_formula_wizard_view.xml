@@ -8,6 +8,7 @@
                 <sheet>
                     <group>
                         <field name="formula_id" readonly="1"/>
+                        <field name="formula_price_id" readonly="1"/>
                         <field name="product_id" readonly="1"/>
                         <group name="dynamic_fields_group" colspan="4">
                             <field name="height"/>
@@ -36,6 +37,7 @@
                     <group>
                         <field name="product_id" readonly="1"/>
                         <field name="formula_id" readonly="1"/>
+                        <field name="formula_price_id" readonly="1"/>
                         <field name="height" readonly="1"/>
                         <field name="width" readonly="1"/>
                         <field name="count" readonly="1"/>

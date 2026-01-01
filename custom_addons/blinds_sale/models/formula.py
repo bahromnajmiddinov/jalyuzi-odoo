@@ -125,6 +125,7 @@ class ProductMeasurementWizard(models.TransientModel):
     order_line_id = fields.Many2one('sale.order.line')
     product_id = fields.Many2one('product.product', required=True)
     formula_id = fields.Many2one('product.formula', required=True)
+    formula_price_id = fields.Many2one('product.formula')
     width = fields.Float(required=True)
     height = fields.Float(required=True)
     count = fields.Float(required=True)

@@ -1,27 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <data>
-        <!-- Inherit Tree View of Sale Order to Modify it -->
-        <record id="view_order_tree" model="ir.ui.view">
-            <field name="name">sale.order.view.tree.inherit.sale.invoice.detail</field>
-            <field name="model">sale.order</field>
-            <field name="inherit_id" ref="sale.view_order_tree"/>
-            <field name="arch" type="xml">
-                <xpath expr="//field[@name='invoice_status']" position="before">
-                    <field name="invoiced_amount"/>
-                    <field name="paid_amount"/>
-                    <field name="due_amount"/>
-                </xpath>
-            </field>
-        </record>
-        <!-- Inherit Form View of Sale Order to Modify it -->
+        <!-- Inherit Form View of Sale Order to Add Payment Details -->
         <record id="view_order_form" model="ir.ui.view">
             <field name="name">sale.order.view.form.inherit.sale.invoice.detail</field>
             <field name="model">sale.order</field>
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//button[@name='action_view_invoice']"
-                       position="before">
+                
+                <!-- 1. Add Payment Button in Button Box (before invoice button) -->
+                <xpath expr="//button[@name='action_view_invoice']" position="before">
                     <button type="object"
                             name="action_view_payments"
                             class="oe_stat_button"
@@ -30,14 +18,97 @@
                         <div class="o_field_widget o_stat_info">
                             <span class="o_stat_value">
                                 <field name="paid_amount_percent"
-                                       widget="statinfo" nolabel="1"
+                                       widget="statinfo" 
+                                       nolabel="1"
                                        class="mr4"/>% Paid
                             </span>
+                            <span class="o_stat_text">Payment</span>
                         </div>
                     </button>
                 </xpath>
-                <xpath expr="//field[@name='date_order']" position="after">
-                    <field name="invoiced_amount" invisible="True"/>
+
+                <!-- 2. Add Payment Summary Fields in Sale Total Section -->
+                <xpath expr="//group[@name='sale_total']" position="inside">
+                    <div class="row" invisible="state not in ['sale', 'done']">
+                        <div class="col-12">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Invoiced Amount:</strong></td>
+                                    <td class="text-end">
+                                        <field name="invoiced_amount" 
+                                               widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Paid Amount:</strong></td>
+                                    <td class="text-end">
+                                        <field name="paid_amount" 
+                                               widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}"/>
+                                    </td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td><strong>Due Amount:</strong></td>
+                                    <td class="text-end">
+                                        <field name="due_amount" 
+                                               widget="monetary" 
+                                               options="{'currency_field': 'currency_id'}"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </xpath>
+
+                <!-- 3. Alternative: Add as a separate page in notebook (Optional) -->
+                <xpath expr="//page[@name='other_information']" position="after">
+                    <page string="Payment Details" 
+                          name="payment_details" 
+                          invisible="state not in ['sale', 'done']">
+                        <group>
+                            <group string="Payment Summary">
+                                <field name="invoiced_amount"/>
+                                <field name="paid_amount"/>
+                                <field name="due_amount"/>
+                                <field name="paid_amount_percent" widget="percentage"/>
+                                <field name="payment_count"/>
+                            </group>
+                            <group string="Payment Status">
+                                <field name="payment_state" 
+                                       widget="badge"
+                                       decoration-success="payment_state == 'paid'"
+                                       decoration-warning="payment_state == 'partial'"
+                                       decoration-danger="payment_state == 'not_paid'"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+
+                <!-- 4. Add invisible helper fields -->
+                <xpath expr="//field[@name='currency_id']" position="after">
+                    <field name="payment_count" invisible="1"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Inherit Tree View of Sale Order -->
+        <record id="view_order_tree" model="ir.ui.view">
+            <field name="name">sale.order.view.tree.inherit.sale.invoice.detail</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='invoice_status']" position="before">
+                    <field name="invoiced_amount" 
+                           optional="hide"
+                           sum="Total Invoiced"/>
+                    <field name="paid_amount" 
+                           optional="show"
+                           sum="Total Paid"/>
+                    <field name="due_amount" 
+                           optional="show"
+                           sum="Total Due"/>
                 </xpath>
             </field>
         </record>

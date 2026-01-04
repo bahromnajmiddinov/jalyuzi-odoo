@@ -22,7 +22,7 @@ class ProductCategory(models.Model):
     def _compute_image_urls(self):
         for category in self:
             if category.image_1920:
-                category.image_url_1920 = f'/web/image/product.category/{category.id}/image_1920'
+                category.image_url_1920 = f'/my/image/product.category/{category.id}/image_1920'
             else:
                 category.image_url_1920 = False
     

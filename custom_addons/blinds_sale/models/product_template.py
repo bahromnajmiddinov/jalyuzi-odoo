@@ -54,7 +54,7 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
         if getattr(self, field_name):
-            return f"{base_url}/web/image/product.template/{self.id}/{field_name}"
+            return f"/my/image/product.template/{self.id}/{field_name}"
         return False
     
     @api.onchange('profit_percentage')

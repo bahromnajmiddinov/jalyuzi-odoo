@@ -92,7 +92,7 @@ class PaymentProof(models.Model):
     @api.depends('proof_image')
     def _compute_image_url(self):
         for proof in self:
-            proof.proof_image_url = self._get_image_url('proof_image')
+            proof.proof_image_url = proof._get_image_url('proof_image')
             
     def _get_image_url(self, field_name):
         self.ensure_one()

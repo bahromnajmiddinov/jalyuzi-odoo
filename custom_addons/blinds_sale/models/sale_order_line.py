@@ -8,6 +8,7 @@ class SaleOrderLine(models.Model):
     # KPI fields
     kpi_employee_id = fields.Many2one('hr.employee')
     is_kpi_product = fields.Boolean(default=False)
+    date_order = fields.Datetime(related='order_id.date_order', store=True)
     
     height = fields.Float(default=0)
     width = fields.Float(default=0)
@@ -50,8 +51,10 @@ class SaleOrderLine(models.Model):
     def _onchange_product_id_set_kpi_employee(self):
         if self.product_id.is_kpi_product:
             self.kpi_employee_id = self.product_id.kpi_employee
+            self.is_kpi_product = True
         else:
             self.kpi_employee_id = False
+            self.is_kpi_product = False
     
     def _auto_add_optional_products(self):
         self.ensure_one()

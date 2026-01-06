@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_kpi_sale_order_line_tree" model="ir.ui.view">
+        <field name="name">kpi.sale.order.line.tree</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <list string="KPI Order Lines" create="false" delete="false">
+                <field name="order_id"/>
+                <field name="order_partner_id"/>
+                <field name="product_id"/>
+                <field name="product_uom_qty"/>
+                <field name="price_unit"/>
+                <field name="price_subtotal" sum="Total"/>
+                <field name="kpi_employee_id"/>
+                <field name="date_order"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View with Filters -->
+    <record id="view_kpi_sale_order_line_search" model="ir.ui.view">
+        <field name="name">kpi.sale.order.line.search</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <search string="KPI Order Lines">
+                <field name="order_id"/>
+                <field name="product_id"/>
+                <field name="kpi_employee_id"/>
+                <field name="order_partner_id"/>
+                
+                <filter string="KPI Products Only" name="kpi_products" 
+                        domain="[('is_kpi_product', '=', True)]"/>
+                
+                <!-- Date Filters -->
+                <separator/>
+                <filter string="This Month" name="this_month"
+                        domain="[('date_order', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                 ('date_order', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                
+                <filter string="Last Month" name="last_month"
+                        domain="[('date_order', '&gt;=', (context_today() - relativedelta(months=1, day=1)).strftime('%Y-%m-%d')),
+                                 ('date_order', '&lt;=', (context_today() - relativedelta(months=1, day=31)).strftime('%Y-%m-%d'))]"/>
+                
+                <filter string="This Quarter" name="this_quarter"
+                        domain="[('date_order', '&gt;=', (context_today() - relativedelta(day=1, month=((context_today().month-1)//3)*3+1)).strftime('%Y-%m-%d')),
+                                 ('date_order', '&lt;=', (context_today() + relativedelta(day=31, month=((context_today().month-1)//3)*3+3)).strftime('%Y-%m-%d'))]"/>
+                
+                <filter string="This Year" name="this_year"
+                        domain="[('date_order', '&gt;=', time.strftime('%Y-01-01')),
+                                 ('date_order', '&lt;=', time.strftime('%Y-12-31'))]"/>
+                
+                <separator/>
+                <filter string="Date Range" name="date_range" date="date_order"/>
+                
+                <!-- Status Filters -->
+                <separator/>
+                <filter string="Sales Orders" name="sales" 
+                        domain="[('state', 'in', ['sale', 'done'])]"/>
+                <filter string="Quotations" name="draft" 
+                        domain="[('state', '=', 'draft')]"/>
+                
+                <!-- Group By -->
+                <group expand="0" string="Group By">
+                    <filter string="Employee" name="group_employee" 
+                            context="{'group_by': 'kpi_employee_id'}"/>
+                    <filter string="Product" name="group_product" 
+                            context="{'group_by': 'product_id'}"/>
+                    <filter string="Customer" name="group_customer" 
+                            context="{'group_by': 'order_partner_id'}"/>
+                    <filter string="Order" name="group_order" 
+                            context="{'group_by': 'order_id'}"/>
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'state'}"/>
+                    <separator/>
+                    <filter string="Order Date" name="group_date_order" 
+                            context="{'group_by': 'date_order:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Pivot View for Analysis -->
+    <record id="view_kpi_sale_order_line_pivot" model="ir.ui.view">
+        <field name="name">kpi.sale.order.line.pivot</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <pivot string="KPI Analysis">
+                <field name="kpi_employee_id" type="row"/>
+                <field name="date_order" interval="month" type="col"/>
+                <field name="price_subtotal" type="measure"/>
+                <field name="product_uom_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="view_kpi_sale_order_line_graph" model="ir.ui.view">
+        <field name="name">kpi.sale.order.line.graph</field>
+        <field name="model">sale.order.line</field>
+        <field name="arch" type="xml">
+            <graph string="KPI Performance" type="bar">
+                <field name="kpi_employee_id"/>
+                <field name="price_subtotal" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_kpi_sale_order_line" model="ir.actions.act_window">
+        <field name="name">KPI Order Lines</field>
+        <field name="res_model">sale.order.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="domain">[('is_kpi_product', '=', True)]</field>
+        <field name="context">{
+            'search_default_kpi_products': 1,
+            'search_default_this_month': 1,
+            'search_default_group_employee': 1,
+            'search_default_sales': 1,
+        }</field>
+        <field name="search_view_id" ref="view_kpi_sale_order_line_search"/>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_kpi_sale_order_line"
+              name="KPI Order Lines"
+              parent="sale.sale_menu_root"
+              action="action_kpi_sale_order_line"
+              sequence="10"/>
+
+</odoo>

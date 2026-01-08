@@ -19,7 +19,9 @@ class ProductFormula(models.Model):
     def _check_formula_safety(self):
         allowed_keywords = {'width', 'height', 'base_price', 'ceil', 
                             'floor', 'sqrt', 'base_width', 'base_height', 
-                            'max', 'count', 'floor'}
+                            'max', 'count', 'floor', 'base_price_with_user_profit_percent',
+                            'user_profit_percent', 'if', 'else', 'True',
+                            'False', 'and', 'or', 'not', 'None'}
         for formula in self:
             try:
                 parsed = ast.parse(formula.formula, mode='eval')
@@ -78,6 +80,11 @@ class ProductFormulaWizard(models.TransientModel):
                 'count': self.count,
                 'if': lambda condition, true_val, false_val: true_val if condition else false_val,
                 'else': lambda condition, true_val, false_val: true_val if not condition else false_val,
+                'True': True,
+                'False': False,
+                'None': None,
+                'user_profit_percent': self.order_line_id.order_id.user_id.profit_percentage or 0,
+                'base_price_with_user_profit_percent': self.product_id.list_price * (1 + (self.order_line_id.order_id.user_id.profit_percentage or 0) / 100),
             }
             
             if formula in [None, False]:

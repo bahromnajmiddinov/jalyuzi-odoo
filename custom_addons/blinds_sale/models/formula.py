@@ -66,6 +66,10 @@ class ProductFormulaWizard(models.TransientModel):
                 else:
                     formula = self.formula_id.formula
             
+            profit_percent = self.order_line_id.order_id.user_id.profit_percentage if self.order_line_id.order_id else 0
+            if profit_percent == 0:
+                profit_percent = self.env.user.profit_percentage
+            
             # Create safe evaluation environment
             allowed_vars = {
                 'base_width': self.product_id.width,
@@ -83,8 +87,8 @@ class ProductFormulaWizard(models.TransientModel):
                 'True': True,
                 'False': False,
                 'None': None,
-                'user_profit_percent': self.order_line_id.order_id.user_id.profit_percentage or 0,
-                'base_price_with_user_profit_percent': self.product_id.list_price * (1 + (self.order_line_id.order_id.user_id.profit_percentage or 0) / 100),
+                'user_profit_percent': profit_percent or 0,
+                'base_price_with_user_profit_percent': self.product_id.list_price * (1 + (profit_percent or 0) / 100),
             }
             
             if formula in [None, False]:
